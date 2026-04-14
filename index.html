@@ -1,46 +1,40 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <meta charset="UTF-8">
-  <title>Cafeteria System</title>
+<meta charset="UTF-8">
+<title>Cafeteria POS</title>
 
-  <style>
-    body{
-      font-family: Arial;
-      background:#f0f2f5;
-      text-align:center;
-    }
+<style>
+body{font-family:Arial;background:#f4f6f9;text-align:center}
 
-    .card{
-      background:white;
-      padding:20px;
-      margin:20px auto;
-      width:320px;
-      border-radius:15px;
-      box-shadow:0 0 10px rgba(0,0,0,0.1);
-    }
+.card{
+  background:#fff;
+  width:340px;
+  margin:20px auto;
+  padding:20px;
+  border-radius:15px;
+  box-shadow:0 0 10px rgba(0,0,0,0.1);
+}
 
-    input, select{
-      width:90%;
-      padding:8px;
-      margin:5px;
-    }
+input,select{
+  width:90%;
+  padding:8px;
+  margin:5px;
+}
 
-    button{
-      width:95%;
-      padding:10px;
-      background:#007bff;
-      color:white;
-      border:none;
-      border-radius:6px;
-      cursor:pointer;
-    }
+button{
+  width:95%;
+  padding:10px;
+  margin-top:5px;
+  background:#1e3a8a;
+  color:white;
+  border:none;
+  border-radius:6px;
+  cursor:pointer;
+}
 
-    img{
-      width:80px;
-      border-radius:50%;
-    }
-  </style>
+img{width:80px;border-radius:50%}
+</style>
 </head>
 
 <body>
@@ -58,130 +52,205 @@
   <img id="photo">
   <h3 id="name"></h3>
 
-  <select id="products"></select>
+  <select id="products" onchange="setPrice()"></select>
+
   <input id="qty" type="number" placeholder="Qty">
 
-  <button onclick="sell()">Sell</button>
+  <p>Price: <span id="price">0</span></p>
+  <p>Total: <span id="total">0</span></p>
+
+  <input id="paid" type="number" placeholder="Paid">
+  <p>Change: <span id="change">0</span></p>
+
+  <button onclick="addToCart()">Add</button>
+  <button onclick="checkout()">Checkout</button>
+  <button onclick="newSale()">New Sale</button>
+  <button onclick="logout()">Logout</button>
 </div>
 
 <!-- ADMIN -->
 <div class="card" id="adminDiv" style="display:none;">
   <h3>Admin Panel</h3>
 
-  <input id="pname" placeholder="Product Name">
-  <input id="ppurchase" placeholder="Purchase Price">
-  <input id="psale" placeholder="Sale Price">
+  <input id="pname" placeholder="Name">
+  <input id="ppurchase" placeholder="Purchase">
+  <input id="psale" placeholder="Sale">
   <input id="pstock" placeholder="Stock">
+  <input id="pbranch" placeholder="Branch">
+  <input id="pmin" placeholder="MinStock">
 
   <button onclick="addProduct()">Add Product</button>
 </div>
 
 <script>
 
-// 🔥 حط هنا لينك Apps Script API
 const API = "https://script.google.com/macros/s/AKfycbxfZ-90qz7Ryu0eigoFDFoA0tiPDVUxkSnyX8arMftTdEYE1dy67Dt_WiYU5DMWYpgZ2w/exec";
 
 let currentUser = {};
+let cart = [];
 
 function login(){
 
-  fetch(API, {
-    method:"POST",
-    body: JSON.stringify({
-      action:"login",
-      username: document.getElementById("user").value,
-      password: document.getElementById("pass").value
-    })
-  })
-  .then(r=>r.json())
-  .then(res=>{
+fetch(API,{
+method:"POST",
+body:JSON.stringify({
+action:"login",
+username:user.value,
+password:pass.value
+})
+})
+.then(r=>r.json())
+.then(res=>{
 
-    if(res.status=="success"){
+if(res.status=="success"){
 
-      currentUser = res;
+currentUser=res;
+localStorage.setItem("user",JSON.stringify(res));
 
-      document.getElementById("loginDiv").style.display="none";
+loginSuccess();
 
-      document.getElementById("name").innerText = res.name;
-      document.getElementById("photo").src = res.photo || "https://i.pravatar.cc/100";
+}else{
+alert("Wrong login");
+}
 
-      if(res.role=="admin"){
-        document.getElementById("adminDiv").style.display="block";
-      } else {
-        document.getElementById("cashierDiv").style.display="block";
-        loadProducts();
-      }
+});
 
-    } else {
-      alert("Wrong login ❌");
-    }
+}
 
-  });
+function loginSuccess(){
+
+loginDiv.style.display="none";
+
+name.innerText=currentUser.name;
+photo.src=currentUser.photo||"https://i.pravatar.cc/100";
+
+if(currentUser.role=="admin"){
+adminDiv.style.display="block";
+}else{
+cashierDiv.style.display="block";
+loadProducts();
+}
 
 }
 
 function loadProducts(){
 
-  fetch(API, {
-    method:"POST",
-    body: JSON.stringify({
-      action:"getProducts",
-      branch: currentUser.branch
-    })
-  })
-  .then(r=>r.json())
-  .then(data=>{
+fetch(API,{
+method:"POST",
+body:JSON.stringify({
+action:"getProducts",
+branch:currentUser.branch
+})
+})
+.then(r=>r.json())
+.then(data=>{
 
-    let select = document.getElementById("products");
-    select.innerHTML="";
+products.innerHTML="";
 
-    data.forEach(p=>{
-      let opt = document.createElement("option");
-      opt.value = p.id;
-      opt.text = p.name + " - " + p.price;
-      select.appendChild(opt);
-    });
+data.forEach(p=>{
+let opt=document.createElement("option");
+opt.value=p.id;
+opt.text=`${p.name} - ${p.price}`;
+products.appendChild(opt);
+});
 
-  });
+});
 
 }
 
-function sell(){
+function setPrice(){
 
-  let select = document.getElementById("products");
+let price=products.options[products.selectedIndex].text.split("-")[1];
+document.getElementById("price").innerText=price;
 
-  fetch(API, {
-    method:"POST",
-    body: JSON.stringify({
-      action:"addSale",
-      username: currentUser.name,
-      branch: currentUser.branch,
-      productID: select.value,
-      qty: document.getElementById("qty").value,
-      price: select.options[select.selectedIndex].text.split("-")[1]
-    })
-  });
+}
 
-  alert("Sale Done ✅");
+function addToCart(){
+
+let price=parseFloat(document.getElementById("price").innerText);
+let qty=parseInt(document.getElementById("qty").value);
+
+cart.push({
+productID:products.value,
+qty,
+price,
+total:qty*price
+});
+
+updateTotal();
+
+}
+
+function updateTotal(){
+
+let total=cart.reduce((a,b)=>a+b.total,0);
+document.getElementById("total").innerText=total;
+
+let paid=parseFloat(document.getElementById("paid").value||0);
+document.getElementById("change").innerText=paid-total;
+
+}
+
+function checkout(){
+
+cart.forEach(item=>{
+
+fetch(API,{
+method:"POST",
+body:JSON.stringify({
+action:"addSale",
+username:currentUser.name,
+branch:currentUser.branch,
+productID:item.productID,
+qty:item.qty,
+price:item.price
+})
+});
+
+});
+
+alert("Sale Done");
+}
+
+function newSale(){
+
+cart=[];
+document.getElementById("total").innerText=0;
+document.getElementById("paid").value="";
+document.getElementById("change").innerText=0;
 
 }
 
 function addProduct(){
 
-  fetch(API, {
-    method:"POST",
-    body: JSON.stringify({
-      action:"addProduct",
-      name: document.getElementById("pname").value,
-      purchase: document.getElementById("ppurchase").value,
-      sale: document.getElementById("psale").value,
-      stock: document.getElementById("pstock").value,
-      branch: currentUser.branch
-    })
-  });
+fetch(API,{
+method:"POST",
+body:JSON.stringify({
+action:"addProduct",
+name:pname.value,
+purchase:ppurchase.value,
+sale:psale.value,
+stock:pstock.value,
+branch:pbranch.value,
+minStock:pmin.value
+})
+});
 
-  alert("Product Added ✅");
+alert("Product Added");
 
+}
+
+function logout(){
+localStorage.clear();
+location.reload();
+}
+
+window.onload=function(){
+let u=localStorage.getItem("user");
+if(u){
+currentUser=JSON.parse(u);
+loginSuccess();
+}
 }
 
 </script>
