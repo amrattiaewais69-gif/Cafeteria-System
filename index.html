@@ -5,35 +5,38 @@
 <title>Cafeteria POS</title>
 
 <style>
-body{font-family:Arial;background:#f4f6f9;text-align:center}
+body{font-family:Arial;background:#2f528f;text-align:center;color:#333}
 
 .card{
   background:#fff;
-  width:340px;
+  width:360px;
   margin:20px auto;
   padding:20px;
-  border-radius:15px;
-  box-shadow:0 0 10px rgba(0,0,0,0.1);
+  border-radius:12px;
 }
 
 input,select{
   width:90%;
-  padding:8px;
-  margin:5px;
+  padding:10px;
+  margin:6px;
 }
 
 button{
   width:95%;
   padding:10px;
-  margin-top:5px;
-  background:#1e3a8a;
+  margin:5px;
+  background:#345a9d;
   color:white;
   border:none;
   border-radius:6px;
   cursor:pointer;
 }
 
-img{width:80px;border-radius:50%}
+button:hover{background:#274a86;}
+
+.logout{background:#777;}
+
+img{width:90px;border-radius:50%}
 </style>
 </head>
 
@@ -51,8 +54,11 @@ img{width:80px;border-radius:50%}
 <div class="card" id="cashierDiv" style="display:none;">
   <img id="photo">
   <h3 id="name"></h3>
+  <p id="cashierName"></p>
 
   <select id="products" onchange="setPrice()"></select>
+
+  <p>Stock: <span id="stock">0</span></p>
 
   <input id="qty" type="number" placeholder="Qty">
 
@@ -65,21 +71,23 @@ img{width:80px;border-radius:50%}
   <button onclick="addToCart()">Add</button>
   <button onclick="checkout()">Checkout</button>
   <button onclick="newSale()">New Sale</button>
-  <button onclick="logout()">Logout</button>
+  <button class="logout" onclick="logout()">Logout</button>
 </div>
 
 <!-- ADMIN -->
 <div class="card" id="adminDiv" style="display:none;">
   <h3>Admin Panel</h3>
 
-  <input id="pname" placeholder="Name">
-  <input id="ppurchase" placeholder="Purchase">
-  <input id="psale" placeholder="Sale">
+  <input id="pname" placeholder="Product Name">
+  <input id="ppurchase" placeholder="Purchase Price">
+  <input id="psale" placeholder="Sale Price">
   <input id="pstock" placeholder="Stock">
   <input id="pbranch" placeholder="Branch">
-  <input id="pmin" placeholder="MinStock">
+  <input id="pmin" placeholder="Min Stock">
 
-  <button onclick="addProduct()">Add Product</button>
+  <button onclick="addProduct()">➕ Add Product</button>
+  <button onclick="clearForm()">🧹 Clear</button>
+  <button class="logout" onclick="logout()">Logout</button>
 </div>
 
 <script>
@@ -89,6 +97,7 @@ const API = "https://script.google.com/macros/s/AKfycbxfZ-90qz7Ryu0eigoFDFoA0tiP
 let currentUser = {};
 let cart = [];
 
+// LOGIN
 function login(){
 
 fetch(API,{
@@ -103,12 +112,9 @@ password:pass.value
 .then(res=>{
 
 if(res.status=="success"){
-
 currentUser=res;
 localStorage.setItem("user",JSON.stringify(res));
-
 loginSuccess();
-
 }else{
 alert("Wrong login");
 }
@@ -122,6 +128,7 @@ function loginSuccess(){
 loginDiv.style.display="none";
 
 name.innerText=currentUser.name;
+cashierName.innerText="Cashier: "+currentUser.name;
 photo.src=currentUser.photo||"https://i.pravatar.cc/100";
 
 if(currentUser.role=="admin"){
@@ -133,6 +140,7 @@ loadProducts();
 
 }
 
+// PRODUCTS
 function loadProducts(){
 
 fetch(API,{
@@ -151,8 +159,11 @@ data.forEach(p=>{
 let opt=document.createElement("option");
 opt.value=p.id;
 opt.text=`${p.name} - ${p.price}`;
+opt.setAttribute("data-stock",p.stock);
 products.appendChild(opt);
 });
+
+setPrice();
 
 });
 
@@ -160,15 +171,27 @@ products.appendChild(opt);
 
 function setPrice(){
 
-let price=products.options[products.selectedIndex].text.split("-")[1];
+let selected=products.options[products.selectedIndex];
+
+let price=selected.text.split("-")[1];
+let stockVal=selected.getAttribute("data-stock");
+
 document.getElementById("price").innerText=price;
+document.getElementById("stock").innerText=stockVal;
 
 }
 
+// CART
 function addToCart(){
 
 let price=parseFloat(document.getElementById("price").innerText);
 let qty=parseInt(document.getElementById("qty").value);
+let stockVal=parseInt(document.getElementById("stock").innerText);
+
+if(qty>stockVal){
+alert("Not enough stock ❌");
+return;
+}
 
 cart.push({
 productID:products.value,
@@ -191,10 +214,10 @@ document.getElementById("change").innerText=paid-total;
 
 }
 
+// CHECKOUT
 function checkout(){
 
 cart.forEach(item=>{
-
 fetch(API,{
 method:"POST",
 body:JSON.stringify({
@@ -206,12 +229,13 @@ qty:item.qty,
 price:item.price
 })
 });
-
 });
 
-alert("Sale Done");
+alert("Sale Done ✅");
+
 }
 
+// NEW SALE
 function newSale(){
 
 cart=[];
@@ -221,6 +245,7 @@ document.getElementById("change").innerText=0;
 
 }
 
+// ADMIN
 function addProduct(){
 
 fetch(API,{
@@ -236,15 +261,26 @@ minStock:pmin.value
 })
 });
 
-alert("Product Added");
+alert("Product Added ✅");
 
 }
 
+function clearForm(){
+pname.value="";
+ppurchase.value="";
+psale.value="";
+pstock.value="";
+pbranch.value="";
+pmin.value="";
+}
+
+// LOGOUT
 function logout(){
 localStorage.clear();
 location.reload();
 }
 
+// SESSION
 window.onload=function(){
 let u=localStorage.getItem("user");
 if(u){
