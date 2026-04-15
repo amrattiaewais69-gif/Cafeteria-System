@@ -54,6 +54,7 @@ hr{margin:15px 0}
 
 <!-- CASHIER -->
 <div class="card" id="cashierDiv" style="display:none;">
+
   <img id="photo">
   <h3 id="name"></h3>
   <p id="cashierName"></p>
@@ -65,22 +66,34 @@ hr{margin:15px 0}
   <input id="qty" type="number" placeholder="Qty">
 
   <p>Price: <span id="price">0</span></p>
-  <p>Total: <span id="total">0</span></p>
 
   <input id="paid" type="number" placeholder="Paid" oninput="updateTotal()">
+
+  <p>Total: <span id="total">0</span></p>
   <p>Change: <span id="change">0</span></p>
+
+  <hr>
+
+  <!-- 🧾 CART -->
+  <h4>🧾 Cart</h4>
+  <div id="cartBox" style="text-align:left;background:#f7f7f7;padding:10px;border-radius:8px;max-height:150px;overflow:auto;"></div>
+
+  <b>Total Bill: <span id="billTotal">0</span></b>
+
+  <hr>
 
   <button onclick="addToCart()">Add</button>
   <button onclick="checkout()">Checkout</button>
   <button onclick="newSale()">New Sale</button>
   <button class="logout" onclick="logout()">Logout</button>
+
 </div>
 
 <!-- ADMIN -->
 <div class="card" id="adminDiv" style="display:none;">
+
   <h3>Admin Panel</h3>
 
-  <!-- ADD PRODUCT -->
   <input id="pname" placeholder="Product Name">
   <input id="ppurchase" placeholder="Purchase Price">
   <input id="psale" placeholder="Sale Price">
@@ -89,36 +102,28 @@ hr{margin:15px 0}
   <input id="pmin" placeholder="Min Stock">
 
   <button onclick="addProduct()">➕ Add Product</button>
-  <button onclick="clearForm()">🧹 Clear</button>
 
   <hr>
 
-  <!-- ADD STOCK -->
-  <h4>Increase Stock</h4>
-
   <select id="stockProduct"></select>
-  <p>Current Stock: <span id="currentStock">0</span></p>
-
-  <input id="addQty" type="number" placeholder="Quantity to add">
+  <input id="addQty" type="number" placeholder="Add Stock">
   <button onclick="increaseStock()">➕ Add Stock</button>
 
   <hr>
-
-  <!-- DELETE PRODUCT -->
-  <h4>Delete Product</h4>
 
   <select id="deleteProductList"></select>
   <button onclick="deleteProduct()">❌ Delete</button>
 
   <button class="logout" onclick="logout()">Logout</button>
+
 </div>
 
 <script>
 
-const API = "https://script.google.com/macros/s/AKfycbxfZ-90qz7Ryu0eigoFDFoA0tiPDVUxkSnyX8arMftTdEYE1dy67Dt_WiYU5DMWYpgZ2w/exec";
+const API="https://script.google.com/macros/s/AKfycbxfZ-90qz7Ryu0eigoFDFoA0tiPDVUxkSnyX8arMftTdEYE1dy67Dt_WiYU5DMWYpgZ2w/exec";
 
-let currentUser = {};
-let cart = [];
+let currentUser={};
+let cart=[];
 
 // ================= LOGIN =================
 function login(){
@@ -136,38 +141,39 @@ password:pass.value
 
 if(res.status=="success"){
 currentUser=res;
-localStorage.setItem("user",JSON.stringify(res));
-loginSuccess();
+loginDiv.style.display="none";
+
+name.innerText=res.name;
+cashierName.innerText="Cashier: "+res.name;
+photo.src=res.photo;
+
+if(res.role=="admin"){
+adminDiv.style.display="block";
+loadAdmin();
 }else{
-alert("Wrong login");
+cashierDiv.style.display="block";
+loadProducts();
+}
+
+}else{
+alert("Login Failed");
 }
 
 });
 
 }
 
-function loginSuccess(){
-
-loginDiv.style.display="none";
-
-name.innerText=currentUser.name;
-cashierName.innerText="Cashier: "+currentUser.name;
-photo.src=currentUser.photo||"https://i.pravatar.cc/100";
-
-if(currentUser.role=="admin"){
-adminDiv.style.display="block";
-loadProductsForAdmin();
-}else{
-cashierDiv.style.display="block";
-loadProducts();
-}
-
-}
-
-// ================= CASHIER =================
+// ================= PRODUCTS =================
 function loadProducts(){
 
-fetch(API + "?action=getProducts&role=" + currentUser.role + "&branch=" + currentUser.branch)
+fetch(API,{
+method:"POST",
+body:JSON.stringify({
+action:"getProducts",
+role:currentUser.role,
+branch:currentUser.branch
+})
+})
 .then(r=>r.json())
 .then(data=>{
 
@@ -176,16 +182,10 @@ products.innerHTML="";
 data.forEach(p=>{
 
 let opt=document.createElement("option");
-
-let warning = "";
-if(p.stock <= p.minStock){
-warning = " ⚠️";
-}
-
 opt.value=p.id;
-opt.text=`${p.name} - ${p.price} (Stock: ${p.stock})${warning}`;
-opt.setAttribute("data-stock",p.stock);
+opt.text=`${p.name} - ${p.price} (Stock:${p.stock})`;
 opt.setAttribute("data-price",p.price);
+opt.setAttribute("data-stock",p.stock);
 
 products.appendChild(opt);
 
@@ -199,126 +199,69 @@ setPrice();
 
 function setPrice(){
 
-let selected=products.options[products.selectedIndex];
-
-let price=selected.getAttribute("data-price");
-let stockVal=selected.getAttribute("data-stock");
-
-document.getElementById("price").innerText=price || 0;
-document.getElementById("stock").innerText=stockVal || 0;
+let s=products.options[products.selectedIndex];
+price.innerText=s.getAttribute("data-price");
+stock.innerText=s.getAttribute("data-stock");
 
 }
 
 // ================= CART =================
 function addToCart(){
 
-let price=parseFloat(document.getElementById("price").innerText);
-let qty=parseInt(document.getElementById("qty").value);
-let stockVal=parseInt(document.getElementById("stock").innerText);
-
-if(!qty || qty <= 0){
-alert("Enter valid quantity");
-return;
-}
-
-if(qty > stockVal){
-alert("Not enough stock ❌");
-return;
-}
+let p=parseFloat(price.innerText);
+let q=parseInt(qty.value);
 
 cart.push({
-productID:products.value,
-qty,
-price,
-total:qty*price
+id:products.value,
+name:products.options[products.selectedIndex].text,
+qty:q,
+price:p,
+total:q*p
 });
 
-updateTotal();
+renderCart();
+updateBill();
 
 }
 
-function updateTotal(){
+function renderCart(){
 
-let total=cart.reduce((a,b)=>a+b.total,0);
-document.getElementById("total").innerText=total;
+cartBox.innerHTML="";
+let t=0;
 
-let paid=parseFloat(document.getElementById("paid").value||0);
-document.getElementById("change").innerText=paid-total;
+cart.forEach(i=>{
+t+=i.total;
+cartBox.innerHTML+=`<div>${i.name} x ${i.qty} = ${i.total}</div>`;
+});
+
+billTotal.innerText=t;
+
+}
+
+function updateBill(){
+
+let t=cart.reduce((a,b)=>a+b.total,0);
+total.innerText=t;
+
+let paidVal=parseFloat(paid.value||0);
+change.innerText=paidVal-t;
 
 }
 
 // ================= CHECKOUT =================
 function checkout(){
 
-if(cart.length==0){
-alert("Cart is empty");
-return;
-}
-
-let promises = cart.map(item => {
-return fetch(API,{
-method:"POST",
-body:JSON.stringify({
-action:"addSale",
-username:currentUser.name,
-branch:currentUser.branch,
-productID:item.productID,
-qty:item.qty,
-price:item.price
-})
-})
-.then(r=>r.json());
-});
-
-Promise.all(promises).then(results=>{
-
-let hasLowStock = false;
-
-for(let res of results){
-
-if(res.status=="error"){
-alert(res.message);
-return;
-}
-
-if(res.status=="low_stock"){
-hasLowStock = true;
-}
-
-}
-
-alert("Sale Done ✅");
-
-if(hasLowStock){
-alert("⚠️ Low stock warning");
-}
-
-loadProducts();
-newSale();
-
-});
-
-}
-
-// ================= NEW SALE =================
-function newSale(){
-
 cart=[];
-document.getElementById("total").innerText=0;
-document.getElementById("paid").value="";
-document.getElementById("change").innerText=0;
-
+alert("Done");
+renderCart();
 }
 
 // ================= ADMIN =================
-function loadProductsForAdmin(){
+function loadAdmin(){
 
 fetch(API,{
 method:"POST",
-body:JSON.stringify({
-action:"getProducts",
-role:"admin"
-})
+body:JSON.stringify({action:"getProducts",role:"admin"})
 })
 .then(r=>r.json())
 .then(data=>{
@@ -327,37 +270,34 @@ stockProduct.innerHTML="";
 deleteProductList.innerHTML="";
 
 data.forEach(p=>{
+let o1=document.createElement("option");
+o1.value=p.id;
+o1.text=p.name;
 
-let opt=document.createElement("option");
-opt.value=p.id;
-opt.text=`${p.name} (Stock: ${p.stock}) - ${p.branch}`;
-
-let opt2=opt.cloneNode(true);
-
-stockProduct.appendChild(opt);
-deleteProductList.appendChild(opt2);
-
+stockProduct.appendChild(o1);
+deleteProductList.appendChild(o1.cloneNode(true));
 });
-
-updateStockView();
 
 });
 
 }
 
-function updateStockView(){
+function increaseStock(){
 
-let selected = stockProduct.options[stockProduct.selectedIndex];
-if(selected){
-let stock = selected.text.split("Stock: ")[1].split(")")[0];
-currentStock.innerText = stock;
+fetch(API,{
+method:"POST",
+body:JSON.stringify({
+action:"addStock",
+productID:stockProduct.value,
+qty:addQty.value,
+username:currentUser.name,
+branch:currentUser.branch
+})
+});
+
+alert("Updated");
 }
 
-}
-
-stockProduct.onchange = updateStockView;
-
-// ================= ADD PRODUCT (FIXED + USER) =================
 function addProduct(){
 
 fetch(API,{
@@ -370,38 +310,13 @@ sale:psale.value,
 stock:pstock.value,
 branch:pbranch.value,
 minStock:pmin.value,
-username:currentUser.name   // 🔥 مهم عشان StockLog
+username:currentUser.name
 })
 });
 
-alert("Product Added ✅");
-
+alert("Added");
 }
 
-// ================= STOCK =================
-function increaseStock(){
-
-let qty = parseInt(addQty.value);
-
-fetch(API,{
-method:"POST",
-body:JSON.stringify({
-action:"addStock",
-productID:stockProduct.value,
-qty:qty,
-username:currentUser.name,
-branch:currentUser.branch
-})
-})
-.then(r=>r.json())
-.then(res=>{
-alert("Stock Updated ✅");
-loadProductsForAdmin();
-});
-
-}
-
-// ================= DELETE =================
 function deleteProduct(){
 
 fetch(API,{
@@ -412,38 +327,15 @@ productID:deleteProductList.value,
 username:currentUser.name,
 branch:currentUser.branch
 })
-})
-.then(r=>r.json())
-.then(res=>{
-alert("Deleted ✅");
-loadProductsForAdmin();
 });
 
-}
-
-// ================= CLEAR =================
-function clearForm(){
-pname.value="";
-ppurchase.value="";
-psale.value="";
-pstock.value="";
-pbranch.value="";
-pmin.value="";
+alert("Deleted");
 }
 
 // ================= LOGOUT =================
 function logout(){
 localStorage.clear();
 location.reload();
-}
-
-// ================= SESSION =================
-window.onload=function(){
-let u=localStorage.getItem("user");
-if(u){
-currentUser=JSON.parse(u);
-loginSuccess();
-}
 }
 
 </script>
