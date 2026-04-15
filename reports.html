@@ -10,26 +10,22 @@ body{font-family:Arial;background:#1f3b73;color:white;text-align:center}
 .card{
   background:white;
   color:black;
-  width:420px;
+  width:450px;
   margin:20px auto;
   padding:20px;
   border-radius:10px;
 }
 
-input,select{
+input,button{
   width:90%;
   padding:10px;
   margin:6px;
 }
 
 button{
-  width:95%;
-  padding:10px;
-  margin:5px;
   background:#2f528f;
   color:white;
   border:none;
-  border-radius:6px;
 }
 
 table{
@@ -48,13 +44,15 @@ th,td{
 
 <body>
 
+<!-- LOGIN -->
 <div class="card" id="loginBox">
-<h3>Reports Login</h3>
+<h3>Admin Reports Login</h3>
 <input id="u" placeholder="Username">
 <input id="p" type="password" placeholder="Password">
 <button onclick="login()">Login</button>
 </div>
 
+<!-- DASH -->
 <div class="card" id="dash" style="display:none">
 
 <h3>Reports Dashboard</h3>
@@ -62,19 +60,10 @@ th,td{
 <input type="date" id="from">
 <input type="date" id="to">
 
-<select id="branch">
-<option value="ALL">All Branches</option>
-<option value="Branch1">Branch1</option>
-<option value="Branch2">Branch2</option>
-</select>
+<button onclick="loadReport()">Sales + Profit</button>
+<button onclick="exportExcel()">Export Excel</button>
 
-<button onclick="loadSales()">Sales Report</button>
-<button onclick="loadTop()">Top Products</button>
-<button onclick="loadInventory()">Inventory</button>
-
-<hr>
-
-<div id="output"></div>
+<div id="out"></div>
 
 </div>
 
@@ -82,15 +71,13 @@ th,td{
 
 const API="https://script.google.com/macros/s/AKfycbxfZ-90qz7Ryu0eigoFDFoA0tiPDVUxkSnyX8arMftTdEYE1dy67Dt_WiYU5DMWYpgZ2w/exec";
 
-let user={};
-
 // ================= LOGIN =================
 function login(){
 
 fetch(API,{
 method:"POST",
 body:JSON.stringify({
-action:"login",
+action:"reportLogin",
 username:u.value,
 password:p.value
 })
@@ -99,9 +86,10 @@ password:p.value
 .then(res=>{
 
 if(res.status=="success"){
-user=res;
 loginBox.style.display="none";
 dash.style.display="block";
+}else if(res.status=="denied"){
+alert("Admin only ❌");
 }else{
 alert("Invalid login");
 }
@@ -110,28 +98,27 @@ alert("Invalid login");
 
 }
 
-// ================= SALES =================
-function loadSales(){
+// ================= REPORT =================
+function loadReport(){
 
 fetch(API,{
 method:"POST",
 body:JSON.stringify({
-action:"getReportSales",
+action:"getAdvancedSalesReport",
 from:from.value,
-to:to.value,
-branch:branch.value
+to:to.value
 })
 })
 .then(r=>r.json())
 .then(data=>{
 
-let html=`<table>
+let html=`<h3>Total Sales: ${data.totalSales}</h3>
+<h3>Profit: ${data.profit}</h3>
+
+<table>
 <tr><th>Date</th><th>Cashier</th><th>Product</th><th>Qty</th><th>Total</th></tr>`;
 
-let total=0;
-
-data.forEach(r=>{
-total+=r.total;
+data.sales.forEach(r=>{
 html+=`<tr>
 <td>${r.date}</td>
 <td>${r.cashier}</td>
@@ -141,60 +128,24 @@ html+=`<tr>
 </tr>`;
 });
 
-html+=`</table><h3>Total: ${total}</h3>`;
+html+="</table>";
 
-output.innerHTML=html;
+// top cashier
+html+="<h3>Top Cashiers</h3>";
+
+for(let c in data.topCashier){
+html+=`<div>${c} : ${data.topCashier[c]}</div>`;
+}
+
+out.innerHTML=html;
 
 });
 
 }
 
-// ================= TOP =================
-function loadTop(){
-
-fetch(API,{
-method:"POST",
-body:JSON.stringify({action:"getTopProducts"})
-})
-.then(r=>r.json())
-.then(data=>{
-
-let html="<h3>Top Products</h3><table><tr><th>Product</th><th>Qty</th></tr>";
-
-data.forEach(r=>{
-html+=`<tr><td>${r.product}</td><td>${r.qty}</td></tr>`;
-});
-
-html+="</table>";
-
-output.innerHTML=html;
-
-});
-
-}
-
-// ================= INVENTORY =================
-function loadInventory(){
-
-fetch(API,{
-method:"POST",
-body:JSON.stringify({action:"getInventory"})
-})
-.then(r=>r.json())
-.then(data=>{
-
-let html="<h3>Inventory</h3><table><tr><th>Product</th><th>Stock</th><th>Branch</th></tr>";
-
-data.forEach(r=>{
-html+=`<tr><td>${r.name}</td><td>${r.stock}</td><td>${r.branch}</td></tr>`;
-});
-
-html+="</table>";
-
-output.innerHTML=html;
-
-});
-
+// ================= EXPORT =================
+function exportExcel(){
+window.open(API+"?action=exportSalesExcel","_blank");
 }
 
 </script>
