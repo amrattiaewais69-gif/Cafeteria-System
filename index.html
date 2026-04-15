@@ -167,11 +167,7 @@ loadProducts();
 // ================= CASHIER =================
 function loadProducts(){
 
-fetch(API,{
-method:"POST",
-body:JSON.stringify({
-action:"getProducts",
-branch:currentUser.branch
+fetch(API + "?action=getProducts&role=" + (currentUser.role || "") + "&branch=" + (currentUser.branch || ""))
 })
 })
 .then(r=>r.json())
