@@ -75,8 +75,9 @@ hr{margin:15px 0}
   <hr>
 
   <!-- CART -->
-  <h4>🧾 Cart</h4>
-  <div id="cartBox" style="text-align:left;background:#f7f7f7;padding:10px;border-radius:8px;max-height:160px;overflow:auto;"></div>
+  <h4>🧾 Bill Items</h4>
+
+  <div id="cartBox" style="text-align:left;background:#f7f7f7;padding:10px;border-radius:8px;max-height:180px;overflow:auto;"></div>
 
   <b>Total Bill: <span id="billTotal">0</span></b>
 
@@ -112,7 +113,7 @@ hr{margin:15px 0}
   <hr>
 
   <select id="deleteProductList"></select>
-  <button onclick="deleteProduct()">❌ Delete</button>
+  <button onclick="deleteProduct()">❌ Delete Product</button>
 
   <button class="logout" onclick="logout()">Logout</button>
 
@@ -141,11 +142,12 @@ password:pass.value
 
 if(res.status=="success"){
 currentUser=res;
+
 loginDiv.style.display="none";
 
 name.innerText=res.name;
 cashierName.innerText="Cashier: "+res.name;
-photo.src=res.photo;
+photo.src=res.photo || "https://i.pravatar.cc/100";
 
 if(res.role=="admin"){
 adminDiv.style.display="block";
@@ -212,6 +214,11 @@ function addToCart(){
 let p=parseFloat(price.innerText);
 let q=parseInt(qty.value);
 
+if(!q || q<=0){
+alert("Invalid qty");
+return;
+}
+
 cart.push({
 id:products.value,
 name:products.options[products.selectedIndex].text,
@@ -225,24 +232,56 @@ updateBill();
 
 }
 
+// ================= RENDER CART + REMOVE =================
 function renderCart(){
 
 cartBox.innerHTML="";
 let t=0;
 
-cart.forEach(i=>{
+cart.forEach((i,index)=>{
 t+=i.total;
+
 cartBox.innerHTML+=`
+<div style="display:flex;justify-content:space-between;align-items:center;padding:5px;border-bottom:1px solid #ddd">
+
 <div>
-${i.name} x ${i.qty} = ${i.total}
+<b>${i.name}</b><br>
+<small>Qty: ${i.qty} | Total: ${i.total}</small>
+</div>
+
+<button onclick="removeItem(${index})" style="background:red;width:40px;height:30px">X</button>
+
 </div>
 `;
 });
 
 billTotal.innerText=t;
 
+updateBill();
+
 }
 
+// ================= REMOVE ITEM (RETURN STOCK READY) =================
+function removeItem(index){
+
+if(!confirm("Remove item?")) return;
+
+// optional stock return (backend)
+fetch(API,{
+method:"POST",
+body:JSON.stringify({
+action:"returnStock",
+productID:cart[index].id,
+qty:cart[index].qty
+})
+});
+
+cart.splice(index,1);
+renderCart();
+
+}
+
+// ================= BILL =================
 function updateBill(){
 
 let total=cart.reduce((a,b)=>a+b.total,0);
@@ -255,7 +294,7 @@ document.getElementById("change").innerText=paidVal-total;
 
 }
 
-// ================= CHECKOUT (FIXED) =================
+// ================= CHECKOUT =================
 function checkout(){
 
 if(cart.length==0){
@@ -263,7 +302,7 @@ alert("Cart empty");
 return;
 }
 
-let requests = cart.map(i=>{
+let req=cart.map(i=>{
 
 return fetch(API,{
 method:"POST",
@@ -279,7 +318,7 @@ price:i.price
 
 });
 
-Promise.all(requests).then(res=>{
+Promise.all(req).then(res=>{
 
 for(let r of res){
 if(r.status=="error"){
@@ -359,7 +398,7 @@ username:currentUser.name
 })
 });
 
-alert("Added");
+alert("Product Added");
 }
 
 function increaseStock(){
