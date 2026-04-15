@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Reports Dashboard</title>
+
+<style>
+body{font-family:Arial;background:#1f3b73;color:white;text-align:center}
+
+.card{
+  background:white;
+  color:black;
+  width:420px;
+  margin:20px auto;
+  padding:20px;
+  border-radius:10px;
+}
+
+input,select{
+  width:90%;
+  padding:10px;
+  margin:6px;
+}
+
+button{
+  width:95%;
+  padding:10px;
+  margin:5px;
+  background:#2f528f;
+  color:white;
+  border:none;
+  border-radius:6px;
+}
+
+table{
+  width:100%;
+  border-collapse:collapse;
+  margin-top:10px;
+}
+
+th,td{
+  border:1px solid #ddd;
+  padding:6px;
+  font-size:12px;
+}
+</style>
+</head>
+
+<body>
+
+<div class="card" id="loginBox">
+<h3>Reports Login</h3>
+<input id="u" placeholder="Username">
+<input id="p" type="password" placeholder="Password">
+<button onclick="login()">Login</button>
+</div>
+
+<div class="card" id="dash" style="display:none">
+
+<h3>Reports Dashboard</h3>
+
+<input type="date" id="from">
+<input type="date" id="to">
+
+<select id="branch">
+<option value="ALL">All Branches</option>
+<option value="Branch1">Branch1</option>
+<option value="Branch2">Branch2</option>
+</select>
+
+<button onclick="loadSales()">Sales Report</button>
+<button onclick="loadTop()">Top Products</button>
+<button onclick="loadInventory()">Inventory</button>
+
+<hr>
+
+<div id="output"></div>
+
+</div>
+
+<script>
+
+const API="https://script.google.com/macros/s/AKfycbxfZ-90qz7Ryu0eigoFDFoA0tiPDVUxkSnyX8arMftTdEYE1dy67Dt_WiYU5DMWYpgZ2w/exec";
+
+let user={};
+
+// ================= LOGIN =================
+function login(){
+
+fetch(API,{
+method:"POST",
+body:JSON.stringify({
+action:"login",
+username:u.value,
+password:p.value
+})
+})
+.then(r=>r.json())
+.then(res=>{
+
+if(res.status=="success"){
+user=res;
+loginBox.style.display="none";
+dash.style.display="block";
+}else{
+alert("Invalid login");
+}
+
+});
+
+}
+
+// ================= SALES =================
+function loadSales(){
+
+fetch(API,{
+method:"POST",
+body:JSON.stringify({
+action:"getReportSales",
+from:from.value,
+to:to.value,
+branch:branch.value
+})
+})
+.then(r=>r.json())
+.then(data=>{
+
+let html=`<table>
+<tr><th>Date</th><th>Cashier</th><th>Product</th><th>Qty</th><th>Total</th></tr>`;
+
+let total=0;
+
+data.forEach(r=>{
+total+=r.total;
+html+=`<tr>
+<td>${r.date}</td>
+<td>${r.cashier}</td>
+<td>${r.product}</td>
+<td>${r.qty}</td>
+<td>${r.total}</td>
+</tr>`;
+});
+
+html+=`</table><h3>Total: ${total}</h3>`;
+
+output.innerHTML=html;
+
+});
+
+}
+
+// ================= TOP =================
+function loadTop(){
+
+fetch(API,{
+method:"POST",
+body:JSON.stringify({action:"getTopProducts"})
+})
+.then(r=>r.json())
+.then(data=>{
+
+let html="<h3>Top Products</h3><table><tr><th>Product</th><th>Qty</th></tr>";
+
+data.forEach(r=>{
+html+=`<tr><td>${r.product}</td><td>${r.qty}</td></tr>`;
+});
+
+html+="</table>";
+
+output.innerHTML=html;
+
+});
+
+}
+
+// ================= INVENTORY =================
+function loadInventory(){
+
+fetch(API,{
+method:"POST",
+body:JSON.stringify({action:"getInventory"})
+})
+.then(r=>r.json())
+.then(data=>{
+
+let html="<h3>Inventory</h3><table><tr><th>Product</th><th>Stock</th><th>Branch</th></tr>";
+
+data.forEach(r=>{
+html+=`<tr><td>${r.name}</td><td>${r.stock}</td><td>${r.branch}</td></tr>`;
+});
+
+html+="</table>";
+
+output.innerHTML=html;
+
+});
+
+}
+
+</script>
+
+</body>
+</html>
