@@ -2,27 +2,28 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Reports Dashboard</title>
+<title>Reports</title>
 
 <style>
-body{font-family:Arial;background:#1f3c6d;color:#fff;text-align:center}
+body{font-family:Arial;background:#f2f2f2;text-align:center}
 
 .card{
-background:#fff;color:#333;
-width:500px;margin:20px auto;padding:20px;border-radius:12px;
-}
-
-input,select{
-width:90%;padding:10px;margin:5px;
+background:#fff;
+width:500px;
+margin:20px auto;
+padding:20px;
+border-radius:10px;
 }
 
 button{
-width:95%;padding:10px;margin:5px;
-background:#2f528f;color:#fff;border:none;border-radius:6px;
+width:90%;
+padding:10px;
+margin:5px;
+background:#2f528f;
+color:#fff;
+border:none;
 cursor:pointer;
 }
-
-button:hover{background:#1d3d73;}
 </style>
 </head>
 
@@ -30,127 +31,90 @@ button:hover{background:#1d3d73;}
 
 <h2>📊 Reports Dashboard</h2>
 
-<div class="card">
-
-<h3>1. Sales by Cashier</h3>
-<input id="cashier" placeholder="Username">
-<button onclick="salesByCashier()">Export Excel</button>
-
-<hr>
-
-<h3>2. Sales by Branch</h3>
-<input id="branch" placeholder="Branch">
-<button onclick="salesByBranch()">Export Excel</button>
-
-<hr>
-
-<h3>3. Top Products</h3>
-<button onclick="topProducts()">Export Excel</button>
-
-<hr>
-
-<h3>4. Daily Report</h3>
-<input type="date" id="date">
-<button onclick="dailyReport()">Export Excel</button>
-
-<hr>
-
-<h3>5. Period Report</h3>
-<input type="date" id="from">
-<input type="date" id="to">
-<button onclick="periodReport()">Export Excel</button>
-
-<hr>
-
-<h3>6. Inventory (Stock per Branch)</h3>
-<button onclick="inventory()">Export Excel</button>
-
-</div>
-
 <script>
 
-const API = "https://script.google.com/macros/s/AKfycbxfZ-90qz7Ryu0eigoFDFoA0tiPDVUxkSnyX8arMftTdEYE1dy67Dt_WiYU5DMWYpgZ2w/exec";
+// 🔥 حماية الصفحة
+let user = JSON.parse(localStorage.getItem("user"));
 
-// تحميل ملف
-function downloadFile(data,filename){
-let blob = new Blob([data], { type: "text/csv" });
-let url = window.URL.createObjectURL(blob);
-let a = document.createElement("a");
-a.href = url;
-a.download = filename;
+if(!user || user.role!="admin"){
+alert("Unauthorized ❌");
+window.location.href="index.html";
+}
+
+const API="https://script.google.com/macros/s/AKfycbxfZ-90qz7Ryu0eigoFDFoA0tiPDVUxkSnyX8arMftTdEYE1dy67Dt_WiYU5DMWYpgZ2w/exec";
+
+function download(data,name){
+let blob=new Blob([data],{type:"text/csv"});
+let url=URL.createObjectURL(blob);
+let a=document.createElement("a");
+a.href=url;
+a.download=name;
 a.click();
 }
 
-// ================= REPORTS =================
+// REPORTS
 
-function salesByCashier(){
-fetch(API,{
-method:"POST",
-body:JSON.stringify({
-action:"report_cashier",
-username:cashier.value
-})
-})
+function cashier(){
+let u=prompt("Cashier username");
+
+fetch(API,{method:"POST",body:JSON.stringify({action:"report_cashier",username:u})})
 .then(r=>r.text())
-.then(csv=>downloadFile(csv,"sales_cashier.csv"));
+.then(d=>download(d,"cashier.csv"));
 }
 
-function salesByBranch(){
-fetch(API,{
-method:"POST",
-body:JSON.stringify({
-action:"report_branch",
-branch:branch.value
-})
-})
+function branch(){
+let b=prompt("Branch");
+
+fetch(API,{method:"POST",body:JSON.stringify({action:"report_branch",branch:b})})
 .then(r=>r.text())
-.then(csv=>downloadFile(csv,"sales_branch.csv"));
+.then(d=>download(d,"branch.csv"));
 }
 
-function topProducts(){
-fetch(API,{
-method:"POST",
-body:JSON.stringify({action:"report_top"})
-})
+function top(){
+
+fetch(API,{method:"POST",body:JSON.stringify({action:"report_top"})})
 .then(r=>r.text())
-.then(csv=>downloadFile(csv,"top_products.csv"));
+.then(d=>download(d,"top.csv"));
+
 }
 
-function dailyReport(){
-fetch(API,{
-method:"POST",
-body:JSON.stringify({
-action:"report_day",
-date:date.value
-})
-})
+function day(){
+let d=prompt("Date YYYY-MM-DD");
+
+fetch(API,{method:"POST",body:JSON.stringify({action:"report_day",date:d})})
 .then(r=>r.text())
-.then(csv=>downloadFile(csv,"daily_report.csv"));
+.then(d=>download(d,"day.csv"));
+
 }
 
-function periodReport(){
-fetch(API,{
-method:"POST",
-body:JSON.stringify({
-action:"report_period",
-from:from.value,
-to:to.value
-})
-})
+function period(){
+let f=prompt("From");
+let t=prompt("To");
+
+fetch(API,{method:"POST",body:JSON.stringify({action:"report_period",from:f,to:t})})
 .then(r=>r.text())
-.then(csv=>downloadFile(csv,"period_report.csv"));
+.then(d=>download(d,"period.csv"));
+
 }
 
 function inventory(){
-fetch(API,{
-method:"POST",
-body:JSON.stringify({action:"report_inventory"})
-})
+
+fetch(API,{method:"POST",body:JSON.stringify({action:"report_inventory"})})
 .then(r=>r.text())
-.then(csv=>downloadFile(csv,"inventory.csv"));
+.then(d=>download(d,"inventory.csv"));
+
 }
 
 </script>
+
+<div class="card">
+<button onclick="cashier()">Sales by Cashier</button>
+<button onclick="branch()">Sales by Branch</button>
+<button onclick="top()">Top Products</button>
+<button onclick="day()">Daily Report</button>
+<button onclick="period()">Period Report</button>
+<button onclick="inventory()">Inventory</button>
+</div>
 
 </body>
 </html>
