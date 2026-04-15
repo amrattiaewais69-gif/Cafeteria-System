@@ -164,7 +164,7 @@ loadProducts();
 
 }
 
-// ================= PRODUCTS =================
+// ================= CASHIER =================
 function loadProducts(){
 
 fetch(API,{
@@ -210,8 +210,8 @@ let selected=products.options[products.selectedIndex];
 let price=selected.getAttribute("data-price");
 let stockVal=selected.getAttribute("data-stock");
 
-price ? document.getElementById("price").innerText=price : 0;
-stockVal ? document.getElementById("stock").innerText=stockVal : 0;
+document.getElementById("price").innerText=price || 0;
+document.getElementById("stock").innerText=stockVal || 0;
 
 }
 
@@ -323,7 +323,7 @@ fetch(API,{
 method:"POST",
 body:JSON.stringify({
 action:"getProducts",
-branch:currentUser.branch
+role:"admin"   // 🔥 الحل هنا
 })
 })
 .then(r=>r.json())
@@ -332,11 +332,16 @@ branch:currentUser.branch
 stockProduct.innerHTML="";
 deleteProductList.innerHTML="";
 
+if(data.length == 0){
+alert("No products found ❌");
+return;
+}
+
 data.forEach(p=>{
 
 let opt=document.createElement("option");
 opt.value=p.id;
-opt.text=`${p.name} (Stock: ${p.stock})`;
+opt.text=`${p.name} (Stock: ${p.stock}) - ${p.branch}`;
 
 let opt2=opt.cloneNode(true);
 
@@ -355,7 +360,7 @@ function updateStockView(){
 
 let selected = stockProduct.options[stockProduct.selectedIndex];
 if(selected){
-let stock = selected.text.split("Stock: ")[1].replace(")","");
+let stock = selected.text.split("Stock: ")[1].split(")")[0];
 currentStock.innerText = stock;
 }
 
