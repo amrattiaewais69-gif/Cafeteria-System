@@ -2,66 +2,34 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Reports Dashboard</title>
+<title>Reports</title>
 
 <style>
-body{font-family:Arial;background:#1f3b73;color:white;text-align:center}
-
-.card{
-  background:white;
-  color:black;
-  width:450px;
-  margin:20px auto;
-  padding:20px;
-  border-radius:10px;
-}
-
-input,button{
-  width:90%;
-  padding:10px;
-  margin:6px;
-}
-
-button{
-  background:#2f528f;
-  color:white;
-  border:none;
-}
-
-table{
-  width:100%;
-  border-collapse:collapse;
-  margin-top:10px;
-}
-
-th,td{
-  border:1px solid #ddd;
-  padding:6px;
-  font-size:12px;
-}
+body{font-family:Arial;direction:rtl;text-align:center}
+input,button{margin:5px;padding:8px}
+table{width:100%;border-collapse:collapse;margin-top:20px}
+td,th{border:1px solid #ccc;padding:5px}
+.card{background:#f5f5f5;margin:10px;padding:10px;border-radius:10px}
 </style>
-</head>
 
+</head>
 <body>
 
-<!-- LOGIN -->
-<div class="card" id="loginBox">
-<h3>Admin Reports Login</h3>
-<input id="u" placeholder="Username">
-<input id="p" type="password" placeholder="Password">
-<button onclick="login()">Login</button>
+<h2>📊 صفحة التقارير</h2>
+
+<div id="loginDiv">
+<input id="user" placeholder="Username">
+<input id="pass" type="password" placeholder="Password">
+<button onclick="login()">دخول</button>
 </div>
 
-<!-- DASH -->
-<div class="card" id="dash" style="display:none">
-
-<h3>Reports Dashboard</h3>
+<div id="reportDiv" style="display:none">
 
 <input type="date" id="from">
 <input type="date" id="to">
 
-<button onclick="loadReport()">Sales + Profit</button>
-<button onclick="exportExcel()">Export Excel</button>
+<button onclick="loadReport()">عرض التقرير</button>
+<button onclick="exportExcel()">تحميل Excel</button>
 
 <div id="out"></div>
 
@@ -78,18 +46,16 @@ fetch(API,{
 method:"POST",
 body:JSON.stringify({
 action:"reportLogin",
-username:u.value,
-password:p.value
+username:user.value,
+password:pass.value
 })
 })
 .then(r=>r.json())
-.then(res=>{
+.then(d=>{
 
-if(res.status=="success"){
-loginBox.style.display="none";
-dash.style.display="block";
-}else if(res.status=="denied"){
-alert("Admin only ❌");
+if(d.status=="success"){
+loginDiv.style.display="none";
+reportDiv.style.display="block";
 }else{
 alert("Invalid login");
 }
@@ -98,7 +64,7 @@ alert("Invalid login");
 
 }
 
-// ================= REPORT =================
+// ================= LOAD REPORT =================
 function loadReport(){
 
 fetch(API,{
@@ -112,15 +78,22 @@ to:to.value
 .then(r=>r.json())
 .then(data=>{
 
-let html=`<h3>Total Sales: ${data.totalSales}</h3>
-<h3>Profit: ${data.profit}</h3>
+if(!data.sales.length){
+out.innerHTML="لا يوجد بيانات";
+return;
+}
 
-<table>
-<tr><th>Date</th><th>Cashier</th><th>Product</th><th>Qty</th><th>Total</th></tr>`;
+let html="";
+
+html+=`<div class="card">💰 إجمالي المبيعات: ${data.totalSales}</div>`;
+html+=`<div class="card">📈 الربح: ${data.profit}</div>`;
+html+=`<div class="card">📊 نسبة الربح: ${data.profitPercent}%</div>`;
+
+html+="<table><tr><th>التاريخ</th><th>الكاشير</th><th>الصنف</th><th>الكمية</th><th>الإجمالي</th></tr>";
 
 data.sales.forEach(r=>{
 html+=`<tr>
-<td>${r.date}</td>
+<td>${new Date(r.date).toLocaleString()}</td>
 <td>${r.cashier}</td>
 <td>${r.product}</td>
 <td>${r.qty}</td>
@@ -130,11 +103,22 @@ html+=`<tr>
 
 html+="</table>";
 
-// top cashier
-html+="<h3>Top Cashiers</h3>";
-
+// Top Cashier
+html+="<h3>🏆 أفضل كاشير</h3>";
 for(let c in data.topCashier){
 html+=`<div>${c} : ${data.topCashier[c]}</div>`;
+}
+
+// Top Products
+html+="<h3>🔥 أكثر المنتجات بيعاً</h3>";
+for(let p in data.topProducts){
+html+=`<div>${p} : ${data.topProducts[p]}</div>`;
+}
+
+// Peak Hours
+html+="<h3>⏰ أوقات الذروة</h3>";
+for(let h in data.hourly){
+html+=`<div>${h}:00 → ${data.hourly[h]}</div>`;
 }
 
 out.innerHTML=html;
@@ -145,7 +129,7 @@ out.innerHTML=html;
 
 // ================= EXPORT =================
 function exportExcel(){
-window.open(API+"?action=exportSalesExcel","_blank");
+window.open(API+"?action=exportSalesExcel");
 }
 
 </script>
