@@ -168,7 +168,7 @@ loadProducts();
 function loadProducts(){
 
 fetch(API + "?action=getProducts&role=" + (currentUser.role || "") + "&branch=" + (currentUser.branch || ""))
-})
+
 .then(r=>r.json())
 .then(data=>{
 
