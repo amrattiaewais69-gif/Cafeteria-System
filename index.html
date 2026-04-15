@@ -67,16 +67,16 @@ hr{margin:15px 0}
 
   <p>Price: <span id="price">0</span></p>
 
-  <input id="paid" type="number" placeholder="Paid" oninput="updateTotal()">
+  <input id="paid" type="number" placeholder="Paid" oninput="updateBill()">
 
   <p>Total: <span id="total">0</span></p>
   <p>Change: <span id="change">0</span></p>
 
   <hr>
 
-  <!-- 🧾 CART -->
+  <!-- CART -->
   <h4>🧾 Cart</h4>
-  <div id="cartBox" style="text-align:left;background:#f7f7f7;padding:10px;border-radius:8px;max-height:150px;overflow:auto;"></div>
+  <div id="cartBox" style="text-align:left;background:#f7f7f7;padding:10px;border-radius:8px;max-height:160px;overflow:auto;"></div>
 
   <b>Total Bill: <span id="billTotal">0</span></b>
 
@@ -200,6 +200,7 @@ setPrice();
 function setPrice(){
 
 let s=products.options[products.selectedIndex];
+
 price.innerText=s.getAttribute("data-price");
 stock.innerText=s.getAttribute("data-stock");
 
@@ -231,7 +232,11 @@ let t=0;
 
 cart.forEach(i=>{
 t+=i.total;
-cartBox.innerHTML+=`<div>${i.name} x ${i.qty} = ${i.total}</div>`;
+cartBox.innerHTML+=`
+<div>
+${i.name} x ${i.qty} = ${i.total}
+</div>
+`;
 });
 
 billTotal.innerText=t;
@@ -240,20 +245,69 @@ billTotal.innerText=t;
 
 function updateBill(){
 
-let t=cart.reduce((a,b)=>a+b.total,0);
-total.innerText=t;
+let total=cart.reduce((a,b)=>a+b.total,0);
+
+document.getElementById("total").innerText=total;
 
 let paidVal=parseFloat(paid.value||0);
-change.innerText=paidVal-t;
+
+document.getElementById("change").innerText=paidVal-total;
 
 }
 
-// ================= CHECKOUT =================
+// ================= CHECKOUT (FIXED) =================
 function checkout(){
 
+if(cart.length==0){
+alert("Cart empty");
+return;
+}
+
+let requests = cart.map(i=>{
+
+return fetch(API,{
+method:"POST",
+body:JSON.stringify({
+action:"addSale",
+username:currentUser.name,
+branch:currentUser.branch,
+productID:i.id,
+qty:i.qty,
+price:i.price
+})
+}).then(r=>r.json());
+
+});
+
+Promise.all(requests).then(res=>{
+
+for(let r of res){
+if(r.status=="error"){
+alert(r.message);
+return;
+}
+}
+
+alert("Sale Done ✅");
+
 cart=[];
-alert("Done");
 renderCart();
+
+paid.value="";
+change.innerText=0;
+
+loadProducts();
+
+});
+
+}
+
+// ================= NEW SALE =================
+function newSale(){
+cart=[];
+renderCart();
+paid.value="";
+change.innerText=0;
 }
 
 // ================= ADMIN =================
@@ -261,7 +315,10 @@ function loadAdmin(){
 
 fetch(API,{
 method:"POST",
-body:JSON.stringify({action:"getProducts",role:"admin"})
+body:JSON.stringify({
+action:"getProducts",
+role:"admin"
+})
 })
 .then(r=>r.json())
 .then(data=>{
@@ -270,32 +327,20 @@ stockProduct.innerHTML="";
 deleteProductList.innerHTML="";
 
 data.forEach(p=>{
+
+let text=`${p.name} (Stock:${p.stock}) - ${p.branch}`;
+
 let o1=document.createElement("option");
 o1.value=p.id;
-o1.text=p.name;
+o1.text=text;
 
 stockProduct.appendChild(o1);
 deleteProductList.appendChild(o1.cloneNode(true));
-});
 
 });
 
-}
-
-function increaseStock(){
-
-fetch(API,{
-method:"POST",
-body:JSON.stringify({
-action:"addStock",
-productID:stockProduct.value,
-qty:addQty.value,
-username:currentUser.name,
-branch:currentUser.branch
-})
 });
 
-alert("Updated");
 }
 
 function addProduct(){
@@ -315,6 +360,22 @@ username:currentUser.name
 });
 
 alert("Added");
+}
+
+function increaseStock(){
+
+fetch(API,{
+method:"POST",
+body:JSON.stringify({
+action:"addStock",
+productID:stockProduct.value,
+qty:addQty.value,
+username:currentUser.name,
+branch:currentUser.branch
+})
+});
+
+alert("Stock Updated");
 }
 
 function deleteProduct(){
