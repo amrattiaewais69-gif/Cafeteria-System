@@ -9,14 +9,14 @@ body{font-family:Arial;background:#2f528f;text-align:center;color:#333}
 
 .card{
   background:#fff;
-  width:360px;
+  width:380px;
   margin:20px auto;
   padding:20px;
   border-radius:12px;
 }
 
 input,select{
-  width:90%;
+  width:92%;
   padding:10px;
   margin:6px;
 }
@@ -37,6 +37,8 @@ button:hover{background:#274a86;}
 .logout{background:#777;}
 
 img{width:90px;border-radius:50%}
+
+hr{margin:15px 0}
 </style>
 </head>
 
@@ -78,6 +80,7 @@ img{width:90px;border-radius:50%}
 <div class="card" id="adminDiv" style="display:none;">
   <h3>Admin Panel</h3>
 
+  <!-- ADD PRODUCT -->
   <input id="pname" placeholder="Product Name">
   <input id="ppurchase" placeholder="Purchase Price">
   <input id="psale" placeholder="Sale Price">
@@ -87,6 +90,26 @@ img{width:90px;border-radius:50%}
 
   <button onclick="addProduct()">➕ Add Product</button>
   <button onclick="clearForm()">🧹 Clear</button>
+
+  <hr>
+
+  <!-- ADD STOCK -->
+  <h4>Increase Stock</h4>
+
+  <select id="stockProduct"></select>
+  <p>Current Stock: <span id="currentStock">0</span></p>
+
+  <input id="addQty" type="number" placeholder="Quantity to add">
+  <button onclick="increaseStock()">➕ Add Stock</button>
+
+  <hr>
+
+  <!-- DELETE PRODUCT -->
+  <h4>Delete Product</h4>
+
+  <select id="deleteProductList"></select>
+  <button onclick="deleteProduct()">❌ Delete</button>
+
   <button class="logout" onclick="logout()">Logout</button>
 </div>
 
@@ -133,6 +156,7 @@ photo.src=currentUser.photo||"https://i.pravatar.cc/100";
 
 if(currentUser.role=="admin"){
 adminDiv.style.display="block";
+loadProductsForAdmin();
 }else{
 cashierDiv.style.display="block";
 loadProducts();
@@ -186,8 +210,8 @@ let selected=products.options[products.selectedIndex];
 let price=selected.getAttribute("data-price");
 let stockVal=selected.getAttribute("data-stock");
 
-document.getElementById("price").innerText=price;
-document.getElementById("stock").innerText=stockVal;
+price ? document.getElementById("price").innerText=price : 0;
+stockVal ? document.getElementById("stock").innerText=stockVal : 0;
 
 }
 
@@ -293,6 +317,103 @@ document.getElementById("change").innerText=0;
 }
 
 // ================= ADMIN =================
+function loadProductsForAdmin(){
+
+fetch(API,{
+method:"POST",
+body:JSON.stringify({
+action:"getProducts",
+branch:currentUser.branch
+})
+})
+.then(r=>r.json())
+.then(data=>{
+
+stockProduct.innerHTML="";
+deleteProductList.innerHTML="";
+
+data.forEach(p=>{
+
+let opt=document.createElement("option");
+opt.value=p.id;
+opt.text=`${p.name} (Stock: ${p.stock})`;
+
+let opt2=opt.cloneNode(true);
+
+stockProduct.appendChild(opt);
+deleteProductList.appendChild(opt2);
+
+});
+
+updateStockView();
+
+});
+
+}
+
+function updateStockView(){
+
+let selected = stockProduct.options[stockProduct.selectedIndex];
+if(selected){
+let stock = selected.text.split("Stock: ")[1].replace(")","");
+currentStock.innerText = stock;
+}
+
+}
+
+stockProduct.onchange = updateStockView;
+
+// ADD STOCK
+function increaseStock(){
+
+let qty = parseInt(addQty.value);
+
+if(!qty || qty<=0){
+alert("Enter valid quantity");
+return;
+}
+
+fetch(API,{
+method:"POST",
+body:JSON.stringify({
+action:"addStock",
+productID:stockProduct.value,
+qty:qty,
+username:currentUser.name,
+branch:currentUser.branch
+})
+})
+.then(r=>r.json())
+.then(res=>{
+alert("Stock Updated ✅");
+loadProductsForAdmin();
+});
+
+}
+
+// DELETE PRODUCT
+function deleteProduct(){
+
+if(!confirm("Are you sure?")) return;
+
+fetch(API,{
+method:"POST",
+body:JSON.stringify({
+action:"deleteProduct",
+productID:deleteProductList.value,
+username:currentUser.name,
+branch:currentUser.branch
+})
+})
+.then(r=>r.json())
+.then(res=>{
+alert("Deleted ✅");
+loadProductsForAdmin();
+});
+
+}
+
+// ADD PRODUCT
 function addProduct(){
 
 fetch(API,{
@@ -312,6 +433,7 @@ alert("Product Added ✅");
 
 }
 
+// CLEAR
 function clearForm(){
 pname.value="";
 ppurchase.value="";
@@ -321,13 +443,13 @@ pbranch.value="";
 pmin.value="";
 }
 
-// ================= LOGOUT =================
+// LOGOUT
 function logout(){
 localStorage.clear();
 location.reload();
 }
 
-// ================= SESSION =================
+// SESSION
 window.onload=function(){
 let u=localStorage.getItem("user");
 if(u){
