@@ -2,36 +2,90 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Reports</title>
+<title>University Reports</title>
 
 <style>
-body{font-family:Arial;direction:rtl;text-align:center}
-input,button{margin:5px;padding:8px}
-table{width:100%;border-collapse:collapse;margin-top:20px}
-td,th{border:1px solid #ccc;padding:5px}
-.card{background:#f5f5f5;margin:10px;padding:10px;border-radius:10px}
+body{font-family:Cairo;background:#f4f6f9;direction:rtl}
+.container{width:90%;margin:auto}
+.card{
+background:white;
+padding:15px;
+margin:15px 0;
+border-radius:10px;
+box-shadow:0 2px 10px rgba(0,0,0,0.1)
+}
+button{
+background:#003366;
+color:white;
+border:none;
+padding:8px 15px;
+margin:5px;
+border-radius:5px;
+cursor:pointer
+}
+input,select{padding:6px;margin:5px}
+h2{color:#003366}
 </style>
 
 </head>
 <body>
 
-<h2>📊 صفحة التقارير</h2>
+<div class="container">
 
-<div id="loginDiv">
-<input id="user" placeholder="Username">
-<input id="pass" type="password" placeholder="Password">
-<button onclick="login()">دخول</button>
+<h2>📊 تقارير الكافيتريا</h2>
+
+<!-- DAILY -->
+<div class="card">
+<h3>📅 مبيعات يوم</h3>
+<input type="date" id="day">
+<button onclick="daily()">عرض</button>
+<button onclick="exportDaily()">Excel</button>
+<div id="d1"></div>
 </div>
 
-<div id="reportDiv" style="display:none">
-
+<!-- RANGE -->
+<div class="card">
+<h3>📆 فترة</h3>
 <input type="date" id="from">
 <input type="date" id="to">
+<button onclick="range()">عرض</button>
+<button onclick="exportRange()">Excel</button>
+<div id="d2"></div>
+</div>
 
-<button onclick="loadReport()">عرض التقرير</button>
-<button onclick="exportExcel()">تحميل Excel</button>
+<!-- CASHIER -->
+<div class="card">
+<h3>👤 كاشير</h3>
+<input id="cashier">
+<button onclick="cashier()">عرض</button>
+</div>
 
-<div id="out"></div>
+<!-- BRANCH -->
+<div class="card">
+<h3>🏢 فرع</h3>
+<input id="branch">
+<button onclick="branch()">عرض</button>
+</div>
+
+<!-- TOP -->
+<div class="card">
+<h3>🔥 المنتجات</h3>
+<button onclick="topProducts()">عرض</button>
+</div>
+
+<!-- STOCK -->
+<div class="card">
+<h3>📦 جرد</h3>
+<input id="stockBranch">
+<button onclick="stock()">عرض</button>
+</div>
+
+<!-- PEAK -->
+<div class="card">
+<h3>⏰ الذروة</h3>
+<input id="peakBranch">
+<button onclick="peak()">عرض</button>
+</div>
 
 </div>
 
@@ -39,97 +93,47 @@ td,th{border:1px solid #ccc;padding:5px}
 
 const API="https://script.google.com/macros/s/AKfycbxfZ-90qz7Ryu0eigoFDFoA0tiPDVUxkSnyX8arMftTdEYE1dy67Dt_WiYU5DMWYpgZ2w/exec";
 
-// ================= LOGIN =================
-function login(){
-
-fetch(API,{
-method:"POST",
-body:JSON.stringify({
-action:"reportLogin",
-username:user.value,
-password:pass.value
-})
-})
-.then(r=>r.json())
-.then(d=>{
-
-if(d.status=="success"){
-loginDiv.style.display="none";
-reportDiv.style.display="block";
-}else{
-alert("Invalid login");
+function daily(){
+fetch(API,{method:"POST",body:JSON.stringify({action:"dailyReport",date:day.value})})
+.then(r=>r.json()).then(d=>d1.innerHTML=JSON.stringify(d));
 }
 
-});
-
+function range(){
+fetch(API,{method:"POST",body:JSON.stringify({action:"rangeReport",from:from.value,to:to.value})})
+.then(r=>r.json()).then(d=>d2.innerHTML=JSON.stringify(d));
 }
 
-// ================= LOAD REPORT =================
-function loadReport(){
-
-fetch(API,{
-method:"POST",
-body:JSON.stringify({
-action:"getAdvancedSalesReport",
-from:from.value,
-to:to.value
-})
-})
-.then(r=>r.json())
-.then(data=>{
-
-if(!data.sales.length){
-out.innerHTML="لا يوجد بيانات";
-return;
+function cashier(){
+fetch(API,{method:"POST",body:JSON.stringify({action:"cashierReport",cashier:cashier.value})})
+.then(r=>r.json()).then(alert);
 }
 
-let html="";
-
-html+=`<div class="card">💰 إجمالي المبيعات: ${data.totalSales}</div>`;
-html+=`<div class="card">📈 الربح: ${data.profit}</div>`;
-html+=`<div class="card">📊 نسبة الربح: ${data.profitPercent}%</div>`;
-
-html+="<table><tr><th>التاريخ</th><th>الكاشير</th><th>الصنف</th><th>الكمية</th><th>الإجمالي</th></tr>";
-
-data.sales.forEach(r=>{
-html+=`<tr>
-<td>${new Date(r.date).toLocaleString()}</td>
-<td>${r.cashier}</td>
-<td>${r.product}</td>
-<td>${r.qty}</td>
-<td>${r.total}</td>
-</tr>`;
-});
-
-html+="</table>";
-
-// Top Cashier
-html+="<h3>🏆 أفضل كاشير</h3>";
-for(let c in data.topCashier){
-html+=`<div>${c} : ${data.topCashier[c]}</div>`;
+function branch(){
+fetch(API,{method:"POST",body:JSON.stringify({action:"branchReport",branch:branch.value})})
+.then(r=>r.json()).then(alert);
 }
 
-// Top Products
-html+="<h3>🔥 أكثر المنتجات بيعاً</h3>";
-for(let p in data.topProducts){
-html+=`<div>${p} : ${data.topProducts[p]}</div>`;
+function topProducts(){
+fetch(API,{method:"POST",body:JSON.stringify({action:"topProducts"})})
+.then(r=>r.json()).then(alert);
 }
 
-// Peak Hours
-html+="<h3>⏰ أوقات الذروة</h3>";
-for(let h in data.hourly){
-html+=`<div>${h}:00 → ${data.hourly[h]}</div>`;
+function stock(){
+fetch(API,{method:"POST",body:JSON.stringify({action:"stockReport",branch:stockBranch.value})})
+.then(r=>r.json()).then(alert);
 }
 
-out.innerHTML=html;
-
-});
-
+function peak(){
+fetch(API,{method:"POST",body:JSON.stringify({action:"peakReport",branch:peakBranch.value})})
+.then(r=>r.json()).then(alert);
 }
 
-// ================= EXPORT =================
-function exportExcel(){
-window.open(API+"?action=exportSalesExcel");
+function exportDaily(){
+window.open(API+"?action=exportDaily&from="+day.value+"&to="+day.value);
+}
+
+function exportRange(){
+window.open(API+"?action=exportRange&from="+from.value+"&to="+to.value);
 }
 
 </script>
