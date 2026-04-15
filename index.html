@@ -167,8 +167,7 @@ loadProducts();
 // ================= CASHIER =================
 function loadProducts(){
 
-fetch(API + "?action=getProducts&role=" + (currentUser.role || "") + "&branch=" + (currentUser.branch || ""))
-
+fetch(API + "?action=getProducts&role=" + currentUser.role + "&branch=" + currentUser.branch)
 .then(r=>r.json())
 .then(data=>{
 
@@ -291,7 +290,7 @@ hasLowStock = true;
 alert("Sale Done ✅");
 
 if(hasLowStock){
-alert("⚠️ في منتجات قربت تخلص من الاستوك");
+alert("⚠️ Low stock warning");
 }
 
 loadProducts();
@@ -318,7 +317,7 @@ fetch(API,{
 method:"POST",
 body:JSON.stringify({
 action:"getProducts",
-role:"admin"   // 🔥 الحل هنا
+role:"admin"
 })
 })
 .then(r=>r.json())
@@ -326,11 +325,6 @@ role:"admin"   // 🔥 الحل هنا
 
 stockProduct.innerHTML="";
 deleteProductList.innerHTML="";
-
-if(data.length == 0){
-alert("No products found ❌");
-return;
-}
 
 data.forEach(p=>{
 
@@ -363,15 +357,31 @@ currentStock.innerText = stock;
 
 stockProduct.onchange = updateStockView;
 
-// ADD STOCK
+// ================= ADD PRODUCT (FIXED + USER) =================
+function addProduct(){
+
+fetch(API,{
+method:"POST",
+body:JSON.stringify({
+action:"addProduct",
+name:pname.value,
+purchase:ppurchase.value,
+sale:psale.value,
+stock:pstock.value,
+branch:pbranch.value,
+minStock:pmin.value,
+username:currentUser.name   // 🔥 مهم عشان StockLog
+})
+});
+
+alert("Product Added ✅");
+
+}
+
+// ================= STOCK =================
 function increaseStock(){
 
 let qty = parseInt(addQty.value);
-
-if(!qty || qty<=0){
-alert("Enter valid quantity");
-return;
-}
 
 fetch(API,{
 method:"POST",
@@ -391,10 +401,8 @@ loadProductsForAdmin();
 
 }
 
-// DELETE PRODUCT
+// ================= DELETE =================
 function deleteProduct(){
-
-if(!confirm("Are you sure?")) return;
 
 fetch(API,{
 method:"POST",
@@ -413,27 +421,7 @@ loadProductsForAdmin();
 
 }
 
-// ADD PRODUCT
-function addProduct(){
-
-fetch(API,{
-method:"POST",
-body:JSON.stringify({
-action:"addProduct",
-name:pname.value,
-purchase:ppurchase.value,
-sale:psale.value,
-stock:pstock.value,
-branch:pbranch.value,
-minStock:pmin.value
-})
-});
-
-alert("Product Added ✅");
-
-}
-
-// CLEAR
+// ================= CLEAR =================
 function clearForm(){
 pname.value="";
 ppurchase.value="";
@@ -443,13 +431,13 @@ pbranch.value="";
 pmin.value="";
 }
 
-// LOGOUT
+// ================= LOGOUT =================
 function logout(){
 localStorage.clear();
 location.reload();
 }
 
-// SESSION
+// ================= SESSION =================
 window.onload=function(){
 let u=localStorage.getItem("user");
 if(u){
