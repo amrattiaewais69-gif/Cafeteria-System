@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>University Reports</title>
+<title>Reports System</title>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
@@ -14,29 +14,26 @@ font-family:Segoe UI;
 background:#eef2f7;
 }
 
-/* LOGIN */
 .login{
 width:360px;
 margin:120px auto;
 background:#fff;
 padding:30px;
 border-radius:15px;
-box-shadow:0 10px 30px rgba(0,0,0,0.2);
 text-align:center;
+box-shadow:0 10px 25px rgba(0,0,0,0.2);
 }
-
-.login img{height:70px;margin-bottom:10px}
 
 input{
 width:90%;
 padding:10px;
 margin:8px;
-border:1px solid #ccc;
 border-radius:8px;
+border:1px solid #ccc;
 }
 
 button{
-padding:10px 15px;
+padding:10px;
 background:#1f3c88;
 color:#fff;
 border:none;
@@ -44,7 +41,6 @@ border-radius:8px;
 cursor:pointer;
 }
 
-/* HEADER */
 .header{
 display:none;
 background:#1f3c88;
@@ -53,7 +49,6 @@ padding:10px;
 text-align:center;
 }
 
-/* MAIN */
 .main{
 display:none;
 padding:15px;
@@ -96,21 +91,18 @@ h3{margin:0 0 10px 0}
 
 <body>
 
-<!-- LOGIN -->
 <div class="login" id="loginDiv">
-<img src="https://amrattiaewais69-gif.github.io/Cafeteria-System/photos/logo.png">
+<img src="https://amrattiaewais69-gif.github.io/Cafeteria-System/photos/logo.png" height="70">
 <h2>Admin Login</h2>
 <input id="u" placeholder="Username">
 <input id="p" type="password" placeholder="Password">
 <button onclick="login()">Login</button>
 </div>
 
-<!-- HEADER -->
 <div class="header" id="header">
-UEC University Reporting System
+UEC University Reports System
 </div>
 
-<!-- MAIN -->
 <div class="main" id="main">
 
 <div class="card grid">
@@ -121,8 +113,8 @@ UEC University Reporting System
 <button onclick="branch()">Branch</button>
 <button onclick="best()">Best Branch</button>
 <button onclick="cashier()">Cashier</button>
-<button onclick="top()">Top Products</button>
-<button onclick="peak()">Peak</button>
+<button onclick="topProducts()">Top Products</button>
+<button onclick="peak()">Peak Hours</button>
 <button onclick="low()">Low Stock</button>
 <button onclick="inv()">Inventory</button>
 
@@ -158,11 +150,13 @@ password:p.value
 })
 .then(r=>r.json())
 .then(d=>{
-if(d.role=="admin"){
+if(d.role==="admin"){
 loginDiv.style.display="none";
 header.style.display="block";
 main.style.display="block";
-}else alert("Admin only");
+}else{
+alert("Admin only");
+}
 });
 }
 
@@ -200,23 +194,21 @@ body:JSON.stringify({action:a})
 }).then(r=>r.json());
 }
 
-// REPORTS
+/* REPORTS */
+
 function summary(){
-title.innerText="Summary";
 call("getSummaryReport").then(d=>{
 render(["Total Sales"],[[d.totalSales]]);
 });
 }
 
 function sales(){
-title.innerText="Sales";
-call("getSalesReport").then(d=>{
-render(["Date","User","Branch","Product","Qty","Sales","Profit"],d);
+call("getBranchReport").then(d=>{
+render(["Branch","Sales"],d);
 });
 }
 
 function daily(){
-title.innerText="Daily";
 call("getDailySales").then(d=>{
 render(["Date","Sales"],d);
 draw(d);
@@ -224,7 +216,6 @@ draw(d);
 }
 
 function branch(){
-title.innerText="Branch";
 call("getBranchReport").then(d=>{
 render(["Branch","Sales"],d);
 draw(d);
@@ -232,7 +223,6 @@ draw(d);
 }
 
 function best(){
-title.innerText="Best Branch";
 call("getBestBranch").then(d=>{
 render(["Branch","Sales"],d);
 draw(d);
@@ -240,15 +230,13 @@ draw(d);
 }
 
 function cashier(){
-title.innerText="Cashier";
 call("getCashierReport").then(d=>{
 render(["User","Sales"],d);
 draw(d);
 });
 }
 
-function top(){
-title.innerText="Top Products";
+function topProducts(){
 call("getTopProducts").then(d=>{
 render(["Product","Qty"],d);
 draw(d);
@@ -256,7 +244,6 @@ draw(d);
 }
 
 function peak(){
-title.innerText="Peak Hours";
 call("getPeakHours").then(d=>{
 render(["Hour","Sales"],d);
 draw(d);
@@ -264,14 +251,12 @@ draw(d);
 }
 
 function low(){
-title.innerText="Low Stock";
 call("getLowStock").then(d=>{
 render(["Product","Qty","Min","Branch"],d);
 });
 }
 
 function inv(){
-title.innerText="Inventory";
 call("getInventoryByBranch").then(d=>{
 
 let html="";
