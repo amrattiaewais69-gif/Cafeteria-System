@@ -2,87 +2,61 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>University Reports</title>
-
+<title>Reports System</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <style>
 
 body{
 margin:0;
-font-family:'Segoe UI';
-background:linear-gradient(135deg,#1f3c88,#39a2db);
+font-family:Arial;
+background:#eef2f7;
 }
 
 /* LOGIN */
-.login-box{
-width:350px;
+.login{
+width:320px;
 margin:120px auto;
 background:#fff;
-padding:30px;
-border-radius:15px;
-box-shadow:0 10px 25px rgba(0,0,0,0.3);
+padding:25px;
+border-radius:12px;
 text-align:center;
+box-shadow:0 5px 15px rgba(0,0,0,0.2);
 }
 
-.login-box img{height:60px;margin-bottom:10px}
-.login-box h2{margin-bottom:20px}
-
-input{
-width:90%;
-padding:10px;
-margin:10px;
-border-radius:8px;
-border:1px solid #ccc;
-}
+input{width:90%;padding:10px;margin:8px}
 
 button{
-padding:10px 20px;
+padding:10px;
 background:#1f3c88;
 color:#fff;
 border:none;
-border-radius:8px;
 cursor:pointer;
+margin:5px;
+border-radius:6px;
 }
 
-button:hover{background:#162d66}
+/* HEADER */
+.header{
+display:none;
+background:#1f3c88;
+color:#fff;
+padding:10px;
+text-align:center;
+}
 
 /* MAIN */
-.header{
-background:#fff;
-padding:10px;
+.main{
 display:none;
-align-items:center;
-justify-content:space-between;
-box-shadow:0 2px 6px rgba(0,0,0,0.2);
-}
-
-.header img{height:40px}
-
-.container{
-padding:20px;
-display:none;
+padding:15px;
 }
 
 .card{
 background:#fff;
 padding:15px;
-margin-bottom:15px;
-border-radius:12px;
-box-shadow:0 3px 10px rgba(0,0,0,0.15);
+margin:10px 0;
+border-radius:10px;
 }
-
-.grid{
-display:grid;
-grid-template-columns:repeat(auto-fit,minmax(150px,1fr));
-gap:10px;
-}
-
-.grid button{
-width:100%;
-}
-
-h3{margin-top:0}
 
 table{
 width:100%;
@@ -90,50 +64,50 @@ border-collapse:collapse;
 }
 
 th,td{
-padding:8px;
 border:1px solid #ddd;
+padding:6px;
 text-align:center;
 }
 
 th{background:#1f3c88;color:#fff}
+
+.grid{
+display:grid;
+grid-template-columns:repeat(auto-fit,minmax(150px,1fr));
+gap:10px;
+}
 
 </style>
 </head>
 
 <body>
 
-<!-- LOGIN -->
-<div class="login-box" id="loginDiv">
-<img src="./photos/logo.png">
-<h2>Admin Login</h2>
-<input id="user" placeholder="Username">
-<input id="pass" type="password" placeholder="Password">
+<div class="login" id="loginDiv">
+<img src="https://amrattiaewais69-gif.github.io/Cafeteria-System/photos/logo.png" height="60">
+<h3>Admin Login</h3>
+<input id="u" placeholder="Username">
+<input id="p" type="password" placeholder="Password">
 <button onclick="login()">Login</button>
 </div>
 
-<!-- HEADER -->
 <div class="header" id="header">
-<img src="https://amrattiaewais69-gif.github.io/Cafeteria-System/photos/logo.png">
-<h3>University Reporting System</h3>
+<h3>University Reports</h3>
 </div>
 
-<!-- MAIN -->
-<div class="container" id="main">
-
-<div class="card">
-From <input type="date" id="from">
-To <input type="date" id="to">
-</div>
+<div class="main" id="main">
 
 <div class="card grid">
 
-<button onclick="summary()">💰 Summary</button>
-<button onclick="sales()">📊 Sales</button>
-<button onclick="products()">📦 Products</button>
-<button onclick="daily()">📅 Daily</button>
-<button onclick="branches()">🏬 Branches</button>
-<button onclick="bestBranch()">🏆 Best Branch</button>
-<button onclick="cashier()">👤 Best Cashier</button>
+<button onclick="summary()">Summary</button>
+<button onclick="sales()">Sales</button>
+<button onclick="daily()">Daily</button>
+<button onclick="branch()">Branch</button>
+<button onclick="best()">Best Branch</button>
+<button onclick="cashier()">Cashier</button>
+<button onclick="top()">Top Products</button>
+<button onclick="peak()">Peak</button>
+<button onclick="low()">Low Stock</button>
+<button onclick="inv()">Inventory</button>
 
 </div>
 
@@ -144,7 +118,6 @@ To <input type="date" id="to">
 
 <div class="card">
 <table id="table"></table>
-<button onclick="exportExcel()">⬇ Export Excel</button>
 </div>
 
 </div>
@@ -152,129 +125,52 @@ To <input type="date" id="to">
 <script>
 
 const API="https://script.google.com/macros/s/AKfycbxfZ-90qz7Ryu0eigoFDFoA0tiPDVUxkSnyX8arMftTdEYE1dy67Dt_WiYU5DMWYpgZ2w/exec";
-let currentData=[];
 let chart;
+let dataStore=[];
 
-/* LOGIN */
 function login(){
+
 fetch(API,{
 method:"POST",
 body:JSON.stringify({
 action:"login",
-username:user.value,
-password:pass.value
+username:u.value,
+password:p.value
 })
 })
 .then(r=>r.json())
-.then(res=>{
-if(res.role=="admin"){
+.then(d=>{
+if(d.role=="admin"){
 loginDiv.style.display="none";
-header.style.display="flex";
+header.style.display="block";
 main.style.display="block";
-}else{
-alert("Admin only");
 }
 });
 }
 
-/* SUMMARY */
-function summary(){
-title.innerText="Summary Report";
+function call(action,title){
 
-fetchAPI("getSummaryReport").then(d=>{
-currentData=[[d.totalSales,d.totalProfit,d.profitPercent]];
-render(["Sales","Profit","%"],currentData);
-});
-}
+document.getElementById("title").innerText=title;
 
-/* SALES */
-function sales(){
-title.innerText="Sales Report";
-
-fetchAPI("getSalesReport").then(d=>{
-currentData=d;
-render(["Date","User","Branch","Product","Qty","Sales","Profit"],d);
-});
-}
-
-/* PRODUCTS */
-function products(){
-title.innerText="Products Profit";
-
-fetchAPI("getProductsReport").then(d=>{
-currentData=d;
-render(["Product","Sales","Profit"],d);
-draw(d);
-});
-}
-
-/* DAILY */
-function daily(){
-title.innerText="Daily Sales";
-
-fetchAPI("getDailySales").then(d=>{
-currentData=d;
-render(["Date","Sales"],d);
-draw(d);
-});
-}
-
-/* BRANCHES */
-function branches(){
-title.innerText="Branches Sales";
-
-fetchAPI("getBranchReport").then(d=>{
-currentData=d;
-render(["Branch","Sales"],d);
-draw(d);
-});
-}
-
-/* BEST BRANCH */
-function bestBranch(){
-title.innerText="Best Branch";
-
-fetchAPI("getBestBranch").then(d=>{
-currentData=d;
-render(["Branch","Sales"],d);
-draw(d);
-});
-}
-
-/* CASHIER */
-function cashier(){
-title.innerText="Best Cashier";
-
-fetchAPI("getCashierReport").then(d=>{
-currentData=d;
-render(["User","Sales"],d);
-draw(d);
-});
-}
-
-/* FETCH */
-function fetchAPI(action){
 return fetch(API,{
 method:"POST",
-body:JSON.stringify({
-action:action,
-from:from.value,
-to:to.value
-})
+body:JSON.stringify({action})
 }).then(r=>r.json());
 }
 
-/* TABLE */
 function render(h,d){
+
 let html="<tr>"+h.map(x=>"<th>"+x+"</th>").join("")+"</tr>";
+
 d.forEach(r=>{
 html+="<tr>"+r.map(x=>"<td>"+x+"</td>").join("")+"</tr>";
 });
+
 table.innerHTML=html;
 }
 
-/* CHART */
 function draw(d){
+
 if(chart) chart.destroy();
 
 chart=new Chart(document.getElementById("chart"),{
@@ -286,15 +182,86 @@ datasets:[{data:d.map(x=>x[1])}]
 });
 }
 
-/* EXPORT */
-function exportExcel(){
-let csv="\uFEFF";
-currentData.forEach(r=>csv+=r.join(",")+"\n");
+/* REPORTS */
 
-let a=document.createElement("a");
-a.href=URL.createObjectURL(new Blob([csv]));
-a.download="report.csv";
-a.click();
+function summary(){
+call("getSummaryReport","Summary").then(d=>{
+render(["Total"],[[d.totalSales]]);
+});
+}
+
+function sales(){
+call("getSalesReport","Sales").then(d=>{
+dataStore=d;
+render(["Date","User","Branch","Product","Qty","Sale","Profit"],d);
+});
+}
+
+function daily(){
+call("getDailySales","Daily").then(d=>{
+dataStore=d;
+render(["Date","Sales"],d);
+draw(d);
+});
+}
+
+function branch(){
+call("getBranchReport","Branch").then(d=>{
+dataStore=d;
+render(["Branch","Sales"],d);
+draw(d);
+});
+}
+
+function best(){
+call("getBestBranch","Best Branch").then(d=>{
+render(["Branch","Sales"],d);
+draw(d);
+});
+}
+
+function cashier(){
+call("getCashierReport","Cashier").then(d=>{
+render(["User","Sales"],d);
+draw(d);
+});
+}
+
+function top(){
+call("getTopProducts","Top Products").then(d=>{
+render(["Product","Qty"],d);
+draw(d);
+});
+}
+
+function peak(){
+call("getPeakHours","Peak Hours").then(d=>{
+render(["Hour","Sales"],d);
+draw(d);
+});
+}
+
+function low(){
+call("getLowStock","Low Stock").then(d=>{
+render(["Product","Qty","Min","Branch"],d);
+});
+}
+
+function inv(){
+call("getInventoryByBranch","Inventory").then(d=>{
+
+let html="";
+
+for(let b in d){
+html+="<tr><th colspan='2'>"+b+"</th></tr>";
+
+d[b].forEach(x=>{
+html+="<tr><td>"+x[0]+"</td><td>"+x[1]+"</td></tr>";
+});
+}
+
+table.innerHTML=html;
+});
 }
 
 </script>
