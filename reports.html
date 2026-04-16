@@ -4,88 +4,146 @@
 <meta charset="UTF-8">
 <title>University Reports</title>
 
-<style>
-body{font-family:Cairo;background:#f4f6f9;direction:rtl}
-.container{width:90%;margin:auto}
-.card{
-background:white;
-padding:15px;
-margin:15px 0;
-border-radius:10px;
-box-shadow:0 2px 10px rgba(0,0,0,0.1)
-}
-button{
-background:#003366;
-color:white;
-border:none;
-padding:8px 15px;
-margin:5px;
-border-radius:5px;
-cursor:pointer
-}
-input,select{padding:6px;margin:5px}
-h2{color:#003366}
-</style>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
+<style>
+
+body{
+  font-family:Arial;
+  background:#f4f6f9;
+  margin:0;
+}
+
+/* LOGIN */
+.login-box{
+  width:350px;
+  margin:120px auto;
+  background:#fff;
+  padding:25px;
+  border-radius:12px;
+  box-shadow:0 4px 10px rgba(0,0,0,0.1);
+  text-align:center;
+}
+
+.login-box input{
+  width:90%;
+  padding:10px;
+  margin:8px;
+}
+
+button{
+  padding:10px;
+  margin:5px;
+  background:#1f3c88;
+  color:#fff;
+  border:none;
+  border-radius:6px;
+  cursor:pointer;
+}
+
+button:hover{background:#162c66}
+
+/* HEADER */
+.header{
+  background:#1f3c88;
+  color:#fff;
+  padding:15px 25px;
+  display:none;
+  align-items:center;
+  justify-content:space-between;
+}
+
+.header img{height:45px}
+
+/* MAIN */
+.container{
+  padding:20px;
+  display:none;
+}
+
+.card{
+  background:#fff;
+  padding:15px;
+  border-radius:10px;
+  margin-bottom:15px;
+  box-shadow:0 2px 6px rgba(0,0,0,0.1);
+}
+
+.filters input{
+  padding:8px;
+  margin:5px;
+}
+
+.actions button{
+  margin:5px;
+}
+
+/* TABLE */
+table{
+  width:100%;
+  border-collapse:collapse;
+  margin-top:10px;
+}
+
+th,td{
+  border:1px solid #ddd;
+  padding:8px;
+  text-align:center;
+}
+
+th{
+  background:#1f3c88;
+  color:#fff;
+}
+
+</style>
 </head>
+
 <body>
 
-<div class="container">
-
-<h2>📊 تقارير الكافيتريا</h2>
-
-<!-- DAILY -->
-<div class="card">
-<h3>📅 مبيعات يوم</h3>
-<input type="date" id="day">
-<button onclick="daily()">عرض</button>
-<button onclick="exportDaily()">Excel</button>
-<div id="d1"></div>
+<!-- LOGIN -->
+<div class="login-box" id="loginDiv">
+  <h2>Admin Login</h2>
+  <input id="user" placeholder="Username">
+  <input id="pass" type="password" placeholder="Password">
+  <button onclick="login()">Login</button>
 </div>
 
-<!-- RANGE -->
-<div class="card">
-<h3>📆 فترة</h3>
-<input type="date" id="from">
-<input type="date" id="to">
-<button onclick="range()">عرض</button>
-<button onclick="exportRange()">Excel</button>
-<div id="d2"></div>
+<!-- HEADER -->
+<div class="header" id="header">
+  <img src="photos/logo.png">
+  <h2>University Cafeteria Reports</h2>
 </div>
 
-<!-- CASHIER -->
-<div class="card">
-<h3>👤 كاشير</h3>
-<input id="cashier">
-<button onclick="cashier()">عرض</button>
-</div>
+<!-- MAIN -->
+<div class="container" id="main">
 
-<!-- BRANCH -->
-<div class="card">
-<h3>🏢 فرع</h3>
-<input id="branch">
-<button onclick="branch()">عرض</button>
-</div>
+  <!-- FILTERS -->
+  <div class="card filters">
+    From: <input type="date" id="from">
+    To: <input type="date" id="to">
+  </div>
 
-<!-- TOP -->
-<div class="card">
-<h3>🔥 المنتجات</h3>
-<button onclick="topProducts()">عرض</button>
-</div>
+  <!-- ACTIONS -->
+  <div class="card actions">
+    <button onclick="sales()">📊 Sales</button>
+    <button onclick="topProducts()">🔥 Top Products</button>
+    <button onclick="cashiers()">👨‍💼 Cashiers</button>
+    <button onclick="stock()">📦 Stock</button>
+    <button onclick="lowStock()">⚠️ Low Stock</button>
+    <button onclick="peak()">⏰ Peak Hours</button>
+  </div>
 
-<!-- STOCK -->
-<div class="card">
-<h3>📦 جرد</h3>
-<input id="stockBranch">
-<button onclick="stock()">عرض</button>
-</div>
+  <!-- CHART -->
+  <div class="card">
+    <canvas id="chart" height="100"></canvas>
+  </div>
 
-<!-- PEAK -->
-<div class="card">
-<h3>⏰ الذروة</h3>
-<input id="peakBranch">
-<button onclick="peak()">عرض</button>
-</div>
+  <!-- TABLE -->
+  <div class="card">
+    <button onclick="exportExcel()">📥 Export Excel</button>
+    <table id="table"></table>
+  </div>
 
 </div>
 
@@ -93,47 +151,211 @@ h2{color:#003366}
 
 const API="https://script.google.com/macros/s/AKfycbxfZ-90qz7Ryu0eigoFDFoA0tiPDVUxkSnyX8arMftTdEYE1dy67Dt_WiYU5DMWYpgZ2w/exec";
 
-function daily(){
-fetch(API,{method:"POST",body:JSON.stringify({action:"dailyReport",date:day.value})})
-.then(r=>r.json()).then(d=>d1.innerHTML=JSON.stringify(d));
+let currentData=[];
+let chart;
+
+// ================= LOGIN =================
+function login(){
+
+fetch(API,{
+method:"POST",
+body:JSON.stringify({
+action:"login",
+username:user.value,
+password:pass.value
+})
+})
+.then(r=>r.json())
+.then(res=>{
+
+if(res.status=="success" && res.role=="admin"){
+
+loginDiv.style.display="none";
+header.style.display="flex";
+main.style.display="block";
+
+}else{
+alert("Admin Only ❌");
 }
 
-function range(){
-fetch(API,{method:"POST",body:JSON.stringify({action:"rangeReport",from:from.value,to:to.value})})
-.then(r=>r.json()).then(d=>d2.innerHTML=JSON.stringify(d));
+});
+
 }
 
-function cashier(){
-fetch(API,{method:"POST",body:JSON.stringify({action:"cashierReport",cashier:cashier.value})})
-.then(r=>r.json()).then(alert);
+// ================= HELPERS =================
+function getDates(){
+return {
+from:from.value,
+to:to.value
+};
 }
 
-function branch(){
-fetch(API,{method:"POST",body:JSON.stringify({action:"branchReport",branch:branch.value})})
-.then(r=>r.json()).then(alert);
+// ================= SALES =================
+function sales(){
+
+fetch(API,{
+method:"POST",
+body:JSON.stringify({action:"getSalesReport",...getDates()})
+})
+.then(r=>r.json())
+.then(data=>{
+
+currentData=data;
+
+renderTable(["Date","User","Branch","Product","Qty","Sales","Profit"],data);
+
+drawChart(data.map(r=>r[0]),data.map(r=>r[5]));
+
+});
+
 }
 
+// ================= TOP PRODUCTS =================
 function topProducts(){
-fetch(API,{method:"POST",body:JSON.stringify({action:"topProducts"})})
-.then(r=>r.json()).then(alert);
+
+fetch(API,{
+method:"POST",
+body:JSON.stringify({action:"getTopProducts",...getDates()})
+})
+.then(r=>r.json())
+.then(data=>{
+
+currentData=data;
+
+renderTable(["Product","Qty"],data);
+
+drawChart(data.map(r=>r[0]),data.map(r=>r[1]));
+
+});
+
 }
 
+// ================= CASHIERS =================
+function cashiers(){
+
+fetch(API,{
+method:"POST",
+body:JSON.stringify({action:"getCashierReport",...getDates()})
+})
+.then(r=>r.json())
+.then(data=>{
+
+currentData=data;
+
+renderTable(["Cashier","Sales"],data);
+
+drawChart(data.map(r=>r[0]),data.map(r=>r[1]));
+
+});
+
+}
+
+// ================= STOCK =================
 function stock(){
-fetch(API,{method:"POST",body:JSON.stringify({action:"stockReport",branch:stockBranch.value})})
-.then(r=>r.json()).then(alert);
+
+fetch(API,{
+method:"POST",
+body:JSON.stringify({action:"getStockReport"})
+})
+.then(r=>r.json())
+.then(data=>{
+
+currentData=data;
+
+renderTable(["Product","Stock","Min","Branch"],data);
+
+if(chart) chart.destroy();
+
+});
+
 }
 
+// ================= LOW STOCK =================
+function lowStock(){
+
+fetch(API,{
+method:"POST",
+body:JSON.stringify({action:"getLowStock"})
+})
+.then(r=>r.json())
+.then(data=>{
+
+currentData=data;
+
+renderTable(["Product","Stock","Branch"],data);
+
+if(chart) chart.destroy();
+
+});
+
+}
+
+// ================= PEAK HOURS =================
 function peak(){
-fetch(API,{method:"POST",body:JSON.stringify({action:"peakReport",branch:peakBranch.value})})
-.then(r=>r.json()).then(alert);
+
+fetch(API,{
+method:"POST",
+body:JSON.stringify({action:"getPeakHours",...getDates()})
+})
+.then(r=>r.json())
+.then(data=>{
+
+currentData=data;
+
+renderTable(["Hour","Sales"],data);
+
+drawChart(data.map(r=>r[0]),data.map(r=>r[1]));
+
+});
+
 }
 
-function exportDaily(){
-window.open(API+"?action=exportDaily&from="+day.value+"&to="+day.value);
+// ================= TABLE =================
+function renderTable(headers,data){
+
+let html="<tr>"+headers.map(h=>"<th>"+h+"</th>").join("")+"</tr>";
+
+data.forEach(r=>{
+html+="<tr>"+r.map(c=>"<td>"+c+"</td>").join("")+"</tr>";
+});
+
+table.innerHTML=html;
+
 }
 
-function exportRange(){
-window.open(API+"?action=exportRange&from="+from.value+"&to="+to.value);
+// ================= CHART =================
+function drawChart(labels,data){
+
+if(chart) chart.destroy();
+
+chart=new Chart(document.getElementById("chart"),{
+type:"bar",
+data:{
+labels:labels,
+datasets:[{
+label:"Report",
+data:data
+}]
+}
+});
+
+}
+
+// ================= EXPORT EXCEL =================
+function exportExcel(){
+
+let csv="\uFEFF";
+
+currentData.forEach(r=>{
+csv+=r.join(",")+"\n";
+});
+
+let blob=new Blob([csv],{type:"text/csv;charset=utf-8;"});
+let link=document.createElement("a");
+link.href=URL.createObjectURL(blob);
+link.download="report.csv";
+link.click();
+
 }
 
 </script>
