@@ -2,58 +2,122 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Reports</title>
+<title>University Reports</title>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <style>
-body{font-family:Arial;background:#eef1f5;margin:0}
 
-.header{
-background:#1f3c88;
-color:#fff;
-padding:15px;
-display:none;
+body{
+margin:0;
+font-family:'Segoe UI';
+background:linear-gradient(135deg,#1f3c88,#39a2db);
+}
+
+/* LOGIN */
+.login-box{
+width:350px;
+margin:120px auto;
+background:#fff;
+padding:30px;
+border-radius:15px;
+box-shadow:0 10px 25px rgba(0,0,0,0.3);
 text-align:center;
 }
 
-.container{padding:20px;display:none}
+.login-box img{height:60px;margin-bottom:10px}
+.login-box h2{margin-bottom:20px}
+
+input{
+width:90%;
+padding:10px;
+margin:10px;
+border-radius:8px;
+border:1px solid #ccc;
+}
+
+button{
+padding:10px 20px;
+background:#1f3c88;
+color:#fff;
+border:none;
+border-radius:8px;
+cursor:pointer;
+}
+
+button:hover{background:#162d66}
+
+/* MAIN */
+.header{
+background:#fff;
+padding:10px;
+display:none;
+align-items:center;
+justify-content:space-between;
+box-shadow:0 2px 6px rgba(0,0,0,0.2);
+}
+
+.header img{height:40px}
+
+.container{
+padding:20px;
+display:none;
+}
 
 .card{
 background:#fff;
 padding:15px;
 margin-bottom:15px;
-border-radius:10px;
-box-shadow:0 2px 6px rgba(0,0,0,0.1);
+border-radius:12px;
+box-shadow:0 3px 10px rgba(0,0,0,0.15);
 }
 
-button{padding:10px;margin:5px;background:#1f3c88;color:#fff;border:none}
+.grid{
+display:grid;
+grid-template-columns:repeat(auto-fit,minmax(150px,1fr));
+gap:10px;
+}
+
+.grid button{
+width:100%;
+}
 
 h3{margin-top:0}
 
-table{width:100%;border-collapse:collapse}
-th,td{border:1px solid #ddd;padding:6px;text-align:center}
-
-.login{
-width:300px;margin:120px auto;background:#fff;padding:20px;text-align:center
+table{
+width:100%;
+border-collapse:collapse;
 }
+
+th,td{
+padding:8px;
+border:1px solid #ddd;
+text-align:center;
+}
+
+th{background:#1f3c88;color:#fff}
+
 </style>
 </head>
 
 <body>
 
-<div class="login" id="loginDiv">
-<h3>Admin Login</h3>
-<input id="user" placeholder="Username"><br>
-<input id="pass" type="password"><br>
+<!-- LOGIN -->
+<div class="login-box" id="loginDiv">
+<img src="./photos/logo.png">
+<h2>Admin Login</h2>
+<input id="user" placeholder="Username">
+<input id="pass" type="password" placeholder="Password">
 <button onclick="login()">Login</button>
 </div>
 
+<!-- HEADER -->
 <div class="header" id="header">
-<img src="https://amrattiaewais69-gif.github.io/Cafeteria-System/photos/logo.png" height="40"><br>
-UEC University Reports
+<img src="https://amrattiaewais69-gif.github.io/Cafeteria-System/photos/logo.png">
+<h3>University Reporting System</h3>
 </div>
 
+<!-- MAIN -->
 <div class="container" id="main">
 
 <div class="card">
@@ -61,22 +125,26 @@ From <input type="date" id="from">
 To <input type="date" id="to">
 </div>
 
-<div class="card">
+<div class="card grid">
+
 <button onclick="summary()">💰 Summary</button>
 <button onclick="sales()">📊 Sales</button>
+<button onclick="products()">📦 Products</button>
 <button onclick="daily()">📅 Daily</button>
 <button onclick="branches()">🏬 Branches</button>
 <button onclick="bestBranch()">🏆 Best Branch</button>
+<button onclick="cashier()">👤 Best Cashier</button>
+
 </div>
 
 <div class="card">
-<h3 id="reportTitle">Report</h3>
+<h3 id="title">Report</h3>
 <canvas id="chart"></canvas>
 </div>
 
 <div class="card">
 <table id="table"></table>
-<button onclick="exportExcel()">Export Excel</button>
+<button onclick="exportExcel()">⬇ Export Excel</button>
 </div>
 
 </div>
@@ -87,120 +155,142 @@ const API="https://script.google.com/macros/s/AKfycbxfZ-90qz7Ryu0eigoFDFoA0tiPDV
 let currentData=[];
 let chart;
 
-// LOGIN
+/* LOGIN */
 function login(){
 fetch(API,{
 method:"POST",
-body:JSON.stringify({action:"login",username:user.value,password:pass.value})
+body:JSON.stringify({
+action:"login",
+username:user.value,
+password:pass.value
+})
 })
 .then(r=>r.json())
 .then(res=>{
 if(res.role=="admin"){
 loginDiv.style.display="none";
-header.style.display="block";
+header.style.display="flex";
 main.style.display="block";
-}else alert("Admin only");
+}else{
+alert("Admin only");
+}
 });
 }
 
-// SUMMARY
+/* SUMMARY */
 function summary(){
-reportTitle.innerText="Summary Report";
+title.innerText="Summary Report";
 
-fetch(API,{
-method:"POST",
-body:JSON.stringify({action:"getSummaryReport",from:from.value,to:to.value})
-})
-.then(r=>r.json())
-.then(d=>{
+fetchAPI("getSummaryReport").then(d=>{
 currentData=[[d.totalSales,d.totalProfit,d.profitPercent]];
-renderTable(["Sales","Profit","%"],currentData);
+render(["Sales","Profit","%"],currentData);
 });
 }
 
-// SALES
+/* SALES */
 function sales(){
-reportTitle.innerText="Sales Report";
+title.innerText="Sales Report";
 
-fetch(API,{
-method:"POST",
-body:JSON.stringify({action:"getSalesReport",from:from.value,to:to.value})
-})
-.then(r=>r.json())
-.then(d=>{
+fetchAPI("getSalesReport").then(d=>{
 currentData=d;
-renderTable(["Date","User","Branch","Product","Qty","Sales","Profit"],d);
+render(["Date","User","Branch","Product","Qty","Sales","Profit"],d);
 });
 }
 
-// DAILY
+/* PRODUCTS */
+function products(){
+title.innerText="Products Profit";
+
+fetchAPI("getProductsReport").then(d=>{
+currentData=d;
+render(["Product","Sales","Profit"],d);
+draw(d);
+});
+}
+
+/* DAILY */
 function daily(){
-reportTitle.innerText="Daily Sales";
+title.innerText="Daily Sales";
 
-fetch(API,{
-method:"POST",
-body:JSON.stringify({action:"getDailySales",from:from.value,to:to.value})
-})
-.then(r=>r.json())
-.then(d=>{
+fetchAPI("getDailySales").then(d=>{
 currentData=d;
-renderTable(["Date","Sales"],d);
-drawChart(d.map(x=>x[0]),d.map(x=>x[1]));
+render(["Date","Sales"],d);
+draw(d);
 });
 }
 
-// BRANCHES
+/* BRANCHES */
 function branches(){
-reportTitle.innerText="Branch Sales";
+title.innerText="Branches Sales";
 
-fetch(API,{
-method:"POST",
-body:JSON.stringify({action:"getBranchReport",from:from.value,to:to.value})
-})
-.then(r=>r.json())
-.then(d=>{
+fetchAPI("getBranchReport").then(d=>{
 currentData=d;
-renderTable(["Branch","Sales"],d);
-drawChart(d.map(x=>x[0]),d.map(x=>x[1]));
+render(["Branch","Sales"],d);
+draw(d);
 });
 }
 
-// BEST BRANCH
+/* BEST BRANCH */
 function bestBranch(){
-reportTitle.innerText="Best Branch";
+title.innerText="Best Branch";
 
-fetch(API,{
-method:"POST",
-body:JSON.stringify({action:"getBestBranch",from:from.value,to:to.value})
-})
-.then(r=>r.json())
-.then(d=>{
+fetchAPI("getBestBranch").then(d=>{
 currentData=d;
-renderTable(["Branch","Sales"],d);
-drawChart(d.map(x=>x[0]),d.map(x=>x[1]));
+render(["Branch","Sales"],d);
+draw(d);
 });
 }
 
-// TABLE
-function renderTable(h,d){
+/* CASHIER */
+function cashier(){
+title.innerText="Best Cashier";
+
+fetchAPI("getCashierReport").then(d=>{
+currentData=d;
+render(["User","Sales"],d);
+draw(d);
+});
+}
+
+/* FETCH */
+function fetchAPI(action){
+return fetch(API,{
+method:"POST",
+body:JSON.stringify({
+action:action,
+from:from.value,
+to:to.value
+})
+}).then(r=>r.json());
+}
+
+/* TABLE */
+function render(h,d){
 let html="<tr>"+h.map(x=>"<th>"+x+"</th>").join("")+"</tr>";
-d.forEach(r=>html+="<tr>"+r.map(x=>"<td>"+x+"</td>").join("")+"</tr>");
+d.forEach(r=>{
+html+="<tr>"+r.map(x=>"<td>"+x+"</td>").join("")+"</tr>";
+});
 table.innerHTML=html;
 }
 
-// CHART
-function drawChart(l,d){
+/* CHART */
+function draw(d){
 if(chart) chart.destroy();
-chart=new Chart(chart=document.getElementById("chart"),{
+
+chart=new Chart(document.getElementById("chart"),{
 type:"bar",
-data:{labels:l,datasets:[{data:d}]}
+data:{
+labels:d.map(x=>x[0]),
+datasets:[{data:d.map(x=>x[1])}]
+}
 });
 }
 
-// EXPORT
+/* EXPORT */
 function exportExcel(){
 let csv="\uFEFF";
 currentData.forEach(r=>csv+=r.join(",")+"\n");
+
 let a=document.createElement("a");
 a.href=URL.createObjectURL(new Blob([csv]));
 a.download="report.csv";
