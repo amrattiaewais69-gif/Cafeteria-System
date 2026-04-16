@@ -2,38 +2,46 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Reports System</title>
+<title>University Reports</title>
+
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <style>
 
 body{
 margin:0;
-font-family:Arial;
+font-family:Segoe UI;
 background:#eef2f7;
 }
 
 /* LOGIN */
 .login{
-width:320px;
+width:360px;
 margin:120px auto;
 background:#fff;
-padding:25px;
-border-radius:12px;
+padding:30px;
+border-radius:15px;
+box-shadow:0 10px 30px rgba(0,0,0,0.2);
 text-align:center;
-box-shadow:0 5px 15px rgba(0,0,0,0.2);
 }
 
-input{width:90%;padding:10px;margin:8px}
+.login img{height:70px;margin-bottom:10px}
+
+input{
+width:90%;
+padding:10px;
+margin:8px;
+border:1px solid #ccc;
+border-radius:8px;
+}
 
 button{
-padding:10px;
+padding:10px 15px;
 background:#1f3c88;
 color:#fff;
 border:none;
+border-radius:8px;
 cursor:pointer;
-margin:5px;
-border-radius:6px;
 }
 
 /* HEADER */
@@ -55,7 +63,14 @@ padding:15px;
 background:#fff;
 padding:15px;
 margin:10px 0;
-border-radius:10px;
+border-radius:12px;
+box-shadow:0 3px 10px rgba(0,0,0,0.1);
+}
+
+.grid{
+display:grid;
+grid-template-columns:repeat(auto-fit,minmax(140px,1fr));
+gap:10px;
 }
 
 table{
@@ -69,31 +84,33 @@ padding:6px;
 text-align:center;
 }
 
-th{background:#1f3c88;color:#fff}
-
-.grid{
-display:grid;
-grid-template-columns:repeat(auto-fit,minmax(150px,1fr));
-gap:10px;
+th{
+background:#1f3c88;
+color:#fff;
 }
+
+h3{margin:0 0 10px 0}
 
 </style>
 </head>
 
 <body>
 
+<!-- LOGIN -->
 <div class="login" id="loginDiv">
-<img src="https://amrattiaewais69-gif.github.io/Cafeteria-System/photos/logo.png" height="60">
-<h3>Admin Login</h3>
+<img src="https://amrattiaewais69-gif.github.io/Cafeteria-System/photos/logo.png">
+<h2>Admin Login</h2>
 <input id="u" placeholder="Username">
 <input id="p" type="password" placeholder="Password">
 <button onclick="login()">Login</button>
 </div>
 
+<!-- HEADER -->
 <div class="header" id="header">
-<h3>University Reports</h3>
+UEC University Reporting System
 </div>
 
+<!-- MAIN -->
 <div class="main" id="main">
 
 <div class="card grid">
@@ -125,9 +142,10 @@ gap:10px;
 <script>
 
 const API="https://script.google.com/macros/s/AKfycbxfZ-90qz7Ryu0eigoFDFoA0tiPDVUxkSnyX8arMftTdEYE1dy67Dt_WiYU5DMWYpgZ2w/exec";
-let chart;
-let dataStore=[];
 
+let chart;
+
+// LOGIN
 function login(){
 
 fetch(API,{
@@ -144,20 +162,11 @@ if(d.role=="admin"){
 loginDiv.style.display="none";
 header.style.display="block";
 main.style.display="block";
-}
+}else alert("Admin only");
 });
 }
 
-function call(action,title){
-
-document.getElementById("title").innerText=title;
-
-return fetch(API,{
-method:"POST",
-body:JSON.stringify({action})
-}).then(r=>r.json());
-}
-
+// TABLE
 function render(h,d){
 
 let html="<tr>"+h.map(x=>"<th>"+x+"</th>").join("")+"</tr>";
@@ -169,6 +178,7 @@ html+="<tr>"+r.map(x=>"<td>"+x+"</td>").join("")+"</tr>";
 table.innerHTML=html;
 }
 
+// CHART
 function draw(d){
 
 if(chart) chart.destroy();
@@ -182,79 +192,92 @@ datasets:[{data:d.map(x=>x[1])}]
 });
 }
 
-/* REPORTS */
+// FETCH
+function call(a){
+return fetch(API,{
+method:"POST",
+body:JSON.stringify({action:a})
+}).then(r=>r.json());
+}
 
+// REPORTS
 function summary(){
-call("getSummaryReport","Summary").then(d=>{
-render(["Total"],[[d.totalSales]]);
+title.innerText="Summary";
+call("getSummaryReport").then(d=>{
+render(["Total Sales"],[[d.totalSales]]);
 });
 }
 
 function sales(){
-call("getSalesReport","Sales").then(d=>{
-dataStore=d;
-render(["Date","User","Branch","Product","Qty","Sale","Profit"],d);
+title.innerText="Sales";
+call("getSalesReport").then(d=>{
+render(["Date","User","Branch","Product","Qty","Sales","Profit"],d);
 });
 }
 
 function daily(){
-call("getDailySales","Daily").then(d=>{
-dataStore=d;
+title.innerText="Daily";
+call("getDailySales").then(d=>{
 render(["Date","Sales"],d);
 draw(d);
 });
 }
 
 function branch(){
-call("getBranchReport","Branch").then(d=>{
-dataStore=d;
+title.innerText="Branch";
+call("getBranchReport").then(d=>{
 render(["Branch","Sales"],d);
 draw(d);
 });
 }
 
 function best(){
-call("getBestBranch","Best Branch").then(d=>{
+title.innerText="Best Branch";
+call("getBestBranch").then(d=>{
 render(["Branch","Sales"],d);
 draw(d);
 });
 }
 
 function cashier(){
-call("getCashierReport","Cashier").then(d=>{
+title.innerText="Cashier";
+call("getCashierReport").then(d=>{
 render(["User","Sales"],d);
 draw(d);
 });
 }
 
 function top(){
-call("getTopProducts","Top Products").then(d=>{
+title.innerText="Top Products";
+call("getTopProducts").then(d=>{
 render(["Product","Qty"],d);
 draw(d);
 });
 }
 
 function peak(){
-call("getPeakHours","Peak Hours").then(d=>{
+title.innerText="Peak Hours";
+call("getPeakHours").then(d=>{
 render(["Hour","Sales"],d);
 draw(d);
 });
 }
 
 function low(){
-call("getLowStock","Low Stock").then(d=>{
+title.innerText="Low Stock";
+call("getLowStock").then(d=>{
 render(["Product","Qty","Min","Branch"],d);
 });
 }
 
 function inv(){
-call("getInventoryByBranch","Inventory").then(d=>{
+title.innerText="Inventory";
+call("getInventoryByBranch").then(d=>{
 
 let html="";
 
 for(let b in d){
 html+="<tr><th colspan='2'>"+b+"</th></tr>";
-
 d[b].forEach(x=>{
 html+="<tr><td>"+x[0]+"</td><td>"+x[1]+"</td></tr>";
 });
