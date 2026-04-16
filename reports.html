@@ -2,9 +2,7 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Reports System</title>
-
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<title>University Reports System</title>
 
 <style>
 
@@ -14,20 +12,33 @@ font-family:Segoe UI;
 background:#eef2f7;
 }
 
+.header{
+background:#1f3c88;
+color:#fff;
+padding:10px;
+text-align:center;
+font-weight:bold;
+}
+
+.main{
+padding:15px;
+display:none;
+}
+
 .login{
 width:360px;
 margin:120px auto;
 background:#fff;
-padding:30px;
-border-radius:15px;
+padding:25px;
+border-radius:12px;
 text-align:center;
-box-shadow:0 10px 25px rgba(0,0,0,0.2);
+box-shadow:0 5px 15px rgba(0,0,0,0.2);
 }
 
 input{
 width:90%;
 padding:10px;
-margin:8px;
+margin:6px;
 border-radius:8px;
 border:1px solid #ccc;
 }
@@ -39,44 +50,34 @@ color:#fff;
 border:none;
 border-radius:8px;
 cursor:pointer;
-}
-
-.header{
-display:none;
-background:#1f3c88;
-color:#fff;
-padding:10px;
-text-align:center;
-}
-
-.main{
-display:none;
-padding:15px;
+margin:3px;
 }
 
 .card{
 background:#fff;
 padding:15px;
 margin:10px 0;
-border-radius:12px;
-box-shadow:0 3px 10px rgba(0,0,0,0.1);
+border-radius:10px;
+box-shadow:0 2px 10px rgba(0,0,0,0.1);
 }
 
-.grid{
-display:grid;
-grid-template-columns:repeat(auto-fit,minmax(140px,1fr));
+.filters{
+display:flex;
 gap:10px;
+flex-wrap:wrap;
 }
 
 table{
 width:100%;
 border-collapse:collapse;
+margin-top:10px;
 }
 
 th,td{
 border:1px solid #ddd;
 padding:6px;
 text-align:center;
+font-size:14px;
 }
 
 th{
@@ -84,49 +85,60 @@ background:#1f3c88;
 color:#fff;
 }
 
-h3{margin:0 0 10px 0}
-
 </style>
+
 </head>
 
 <body>
 
-<div class="login" id="loginDiv">
-<img src="https://amrattiaewais69-gif.github.io/Cafeteria-System/photos/logo.png" height="70">
-<h2>Admin Login</h2>
-<input id="u" placeholder="Username">
-<input id="p" type="password" placeholder="Password">
+<!-- LOGIN -->
+<div class="login" id="loginBox">
+
+<h3>Admin Login</h3>
+
+<input id="user" placeholder="Username">
+<input id="pass" type="password" placeholder="Password">
+
 <button onclick="login()">Login</button>
+
 </div>
 
+<!-- HEADER -->
 <div class="header" id="header">
-UEC University Reports System
+UEC University Reporting System
 </div>
 
+<!-- MAIN -->
 <div class="main" id="main">
 
-<div class="card grid">
+<div class="card">
 
-<button onclick="summary()">Summary</button>
+<div class="filters">
+
+<input type="date" id="from">
+<input type="date" id="to">
+
 <button onclick="sales()">Sales</button>
-<button onclick="daily()">Daily</button>
 <button onclick="branch()">Branch</button>
-<button onclick="best()">Best Branch</button>
 <button onclick="cashier()">Cashier</button>
-<button onclick="topProducts()">Top Products</button>
-<button onclick="peak()">Peak Hours</button>
+<button onclick="top()">Top Products</button>
 <button onclick="low()">Low Stock</button>
-<button onclick="inv()">Inventory</button>
+<button onclick="inventory()">Inventory</button>
+<button onclick="daily()">Daily</button>
+<button onclick="peak()">Peak Hours</button>
+
+<button onclick="exportExcel()">Export Excel</button>
+
+</div>
 
 </div>
 
 <div class="card">
+
 <h3 id="title">Report</h3>
-<canvas id="chart"></canvas>
-</div>
 
-<div class="card">
 <table id="table"></table>
+
 </div>
 
 </div>
@@ -135,129 +147,92 @@ UEC University Reports System
 
 const API="https://script.google.com/macros/s/AKfycbxfZ-90qz7Ryu0eigoFDFoA0tiPDVUxkSnyX8arMftTdEYE1dy67Dt_WiYU5DMWYpgZ2w/exec";
 
-let chart;
+let currentData=[];
+let currentTitle="";
 
-// LOGIN
+// ================= LOGIN =================
 function login(){
 
 fetch(API,{
 method:"POST",
+headers:{"Content-Type":"application/json"},
 body:JSON.stringify({
 action:"login",
-username:u.value,
-password:p.value
+username:user.value,
+password:pass.value
 })
 })
 .then(r=>r.json())
 .then(d=>{
-if(d.role==="admin"){
-loginDiv.style.display="none";
+
+if(d.status==="success" && d.role==="admin"){
+loginBox.style.display="none";
 header.style.display="block";
 main.style.display="block";
 }else{
-alert("Admin only");
-}
-});
+alert("Login Failed ❌");
 }
 
-// TABLE
-function render(h,d){
-
-let html="<tr>"+h.map(x=>"<th>"+x+"</th>").join("")+"</tr>";
-
-d.forEach(r=>{
-html+="<tr>"+r.map(x=>"<td>"+x+"</td>").join("")+"</tr>";
 });
 
-table.innerHTML=html;
 }
 
-// CHART
-function draw(d){
-
-if(chart) chart.destroy();
-
-chart=new Chart(document.getElementById("chart"),{
-type:"bar",
-data:{
-labels:d.map(x=>x[0]),
-datasets:[{data:d.map(x=>x[1])}]
-}
-});
-}
-
-// FETCH
-function call(a){
-return fetch(API,{
-method:"POST",
-body:JSON.stringify({action:a})
-}).then(r=>r.json());
-}
-
-/* REPORTS */
-
-function summary(){
-call("getSummaryReport").then(d=>{
-render(["Total Sales"],[[d.totalSales]]);
-});
-}
-
+// ================= SALES =================
 function sales(){
-call("getBranchReport").then(d=>{
-render(["Branch","Sales"],d);
+
+fetchAPI("getSalesReport").then(d=>{
+currentTitle="Sales Report";
+currentData=d;
+renderSales(d);
 });
 }
 
-function daily(){
-call("getDailySales").then(d=>{
-render(["Date","Sales"],d);
-draw(d);
-});
-}
-
+// ================= BRANCH =================
 function branch(){
-call("getBranchReport").then(d=>{
-render(["Branch","Sales"],d);
-draw(d);
+
+fetchAPI("getBranchReport").then(d=>{
+currentTitle="Branch Sales";
+currentData=d;
+renderSimple(["Branch","Sales"],d);
 });
 }
 
-function best(){
-call("getBestBranch").then(d=>{
-render(["Branch","Sales"],d);
-draw(d);
-});
-}
-
+// ================= CASHIER =================
 function cashier(){
-call("getCashierReport").then(d=>{
-render(["User","Sales"],d);
-draw(d);
+
+fetchAPI("getCashierReport").then(d=>{
+currentTitle="Cashier Report";
+currentData=d;
+renderSimple(["Cashier","Sales"],d);
 });
 }
 
-function topProducts(){
-call("getTopProducts").then(d=>{
-render(["Product","Qty"],d);
-draw(d);
+// ================= TOP =================
+function top(){
+
+fetchAPI("getTopProducts").then(d=>{
+currentTitle="Top Products";
+currentData=d;
+renderSimple(["Product","Qty"],d);
 });
 }
 
-function peak(){
-call("getPeakHours").then(d=>{
-render(["Hour","Sales"],d);
-draw(d);
-});
-}
-
+// ================= LOW STOCK =================
 function low(){
-call("getLowStock").then(d=>{
-render(["Product","Qty","Min","Branch"],d);
+
+fetchAPI("getLowStock").then(d=>{
+currentTitle="Low Stock";
+currentData=d;
+renderSimple(["Product","Qty","Min","Branch"],d);
 });
 }
 
-function inv(){
-call("getInventoryByBranch").then(d=>{
+// ================= INVENTORY =================
+function inventory(){
+
+fetchAPI("getInventoryByBranch").then(d=>{
+
+currentTitle="Inventory";
 
 let html="";
 
@@ -269,7 +244,103 @@ html+="<tr><td>"+x[0]+"</td><td>"+x[1]+"</td></tr>";
 }
 
 table.innerHTML=html;
+
 });
+}
+
+// ================= DAILY =================
+function daily(){
+
+fetchAPI("getDailySales").then(d=>{
+currentTitle="Daily Sales";
+currentData=d;
+renderSimple(["Date","Sales"],d);
+});
+}
+
+// ================= PEAK =================
+function peak(){
+
+fetchAPI("getPeakHours").then(d=>{
+currentTitle="Peak Hours";
+currentData=d;
+renderSimple(["Hour","Sales"],d);
+});
+}
+
+// ================= FETCH =================
+function fetchAPI(action){
+
+return fetch(API,{
+method:"POST",
+headers:{"Content-Type":"application/json"},
+body:JSON.stringify({
+action,
+from:from.value,
+to:to.value
+})
+})
+.then(r=>r.json());
+}
+
+// ================= RENDER SALES =================
+function renderSales(data){
+
+title.innerText=currentTitle;
+
+let html=`
+<tr>
+<th>Date</th>
+<th>User</th>
+<th>Branch</th>
+<th>Product</th>
+<th>Qty</th>
+<th>Price</th>
+<th>Total</th>
+</tr>
+`;
+
+data.forEach(r=>{
+html+="<tr>"+r.map(x=>`<td>${x}</td>`).join("")+"</tr>";
+});
+
+table.innerHTML=html;
+}
+
+// ================= SIMPLE =================
+function renderSimple(headers,data){
+
+title.innerText=currentTitle;
+
+let html="<tr>"+headers.map(h=>"<th>"+h+"</th>").join("")+"</tr>";
+
+data.forEach(r=>{
+html+="<tr>"+r.map(x=>`<td>${x}</td>`).join("")+"</tr>";
+});
+
+table.innerHTML=html;
+}
+
+// ================= EXPORT EXCEL =================
+function exportExcel(){
+
+let csv="\uFEFF";
+
+if(currentTitle==="Sales Report"){
+csv+="Date,User,Branch,Product,Qty,Price,Total\n";
+}else{
+csv+="A,B\n";
+}
+
+currentData.forEach(r=>{
+csv+=r.join(",")+"\n";
+});
+
+let blob=new Blob([csv],{type:"text/csv;charset=utf-8;"});
+let a=document.createElement("a");
+a.href=URL.createObjectURL(blob);
+a.download=currentTitle+".csv";
+a.click();
 }
 
 </script>
