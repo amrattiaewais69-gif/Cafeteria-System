@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>UEC Reports | Advanced Audit Dashboard</title>
+    <title>UEC Reports | Ultimate Admin Dashboard</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.0/xlsx.full.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
@@ -10,19 +10,24 @@
         :root { --primary: #1e3a8a; --secondary: #3b82f6; --success: #107c41; --danger: #ef4444; --bg: #f3f4f6; --card: #ffffff; }
         body { font-family: 'Inter', sans-serif; background: var(--bg); margin: 0; display: flex; }
         .sidebar { width: 280px; background: var(--primary); color: white; height: 100vh; position: fixed; padding: 25px; box-sizing: border-box; overflow-y: auto; }
+        .sidebar h2 { font-size: 20px; margin-bottom: 30px; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 10px; }
         .nav-btn { width: 100%; padding: 14px; background: none; border: none; color: #cbd5e1; text-align: left; cursor: pointer; border-radius: 10px; margin-bottom: 8px; font-size: 13px; transition: 0.3s; }
         .nav-btn.active, .nav-btn:hover { background: var(--secondary); color: white; }
         .main { margin-left: 280px; width: calc(100% - 280px); padding: 40px; box-sizing: border-box; }
+        .filter-bar { background: var(--card); padding: 20px; border-radius: 15px; display: flex; gap: 20px; align-items: flex-end; margin-bottom: 30px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
         .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 25px; margin-bottom: 35px; }
         .stat-card { background: var(--card); padding: 20px; border-radius: 15px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); border-left: 5px solid var(--secondary); }
-        .stat-card div { font-size: 24px; font-weight: 700; color: var(--primary); margin-top: 8px; }
+        .stat-card small { color: #64748b; font-size: 11px; font-weight: 700; text-transform: uppercase; }
+        .stat-card div { font-size: 22px; font-weight: 700; color: var(--primary); margin-top: 8px; }
         .report-container { background: var(--card); padding: 30px; border-radius: 20px; box-shadow: 0 10px 15px rgba(0,0,0,0.1); }
         table { width: 100%; border-collapse: collapse; margin-top: 15px; }
-        th { text-align: left; padding: 15px; background: #f8fafc; border-bottom: 2px solid #e2e8f0; font-size: 13px; }
+        th { text-align: left; padding: 15px; background: #f8fafc; border-bottom: 2px solid #e2e8f0; font-size: 13px; color: #475569; }
         td { padding: 15px; border-bottom: 1px solid #f1f5f9; font-size: 14px; }
-        .badge { padding: 3px 8px; border-radius: 6px; font-size: 11px; font-weight: bold; text-transform: uppercase; }
+        .badge { padding: 4px 8px; border-radius: 6px; font-size: 11px; font-weight: bold; }
         .login-screen { position: fixed; inset: 0; background: var(--primary); z-index: 10000; display: flex; align-items: center; justify-content: center; }
         .login-box { background: white; padding: 45px; border-radius: 25px; width: 350px; text-align: center; }
+        input[type="date"] { padding: 8px; border: 1px solid #ddd; border-radius: 8px; }
+        #chartBox { margin-bottom: 30px; height: 300px; }
     </style>
 </head>
 <body>
@@ -30,10 +35,10 @@
 <div id="loginOverlay" class="login-screen">
     <div class="login-box">
         <img src="https://amrattiaewais69-gif.github.io/Cafeteria-System/photos/logo.png" width="80">
-        <h2>UEC Admin</h2>
-        <input type="text" id="u" style="width:100%; padding:10px; margin:10px 0;" placeholder="Username">
-        <input type="password" id="p" style="width:100%; padding:10px; margin:10px 0;" placeholder="Password">
-        <button onclick="doLogin()" style="width:100%; padding:10px; background:var(--primary); color:white; border:none; border-radius:10px; cursor:pointer">Login</button>
+        <h2 style="color:var(--primary)">UEC Admin Panel</h2>
+        <input type="text" id="u" style="width:100%; padding:12px; margin:10px 0; border:1px solid #ddd; border-radius:10px;" placeholder="Admin Username">
+        <input type="password" id="p" style="width:100%; padding:12px; margin:10px 0; border:1px solid #ddd; border-radius:10px;" placeholder="Password">
+        <button onclick="doLogin()" style="width:100%; padding:12px; background:var(--primary); color:white; border:none; border-radius:10px; cursor:pointer; font-weight:bold;">Login</button>
     </div>
 </div>
 
@@ -41,34 +46,40 @@
     <h2>UEC Reports</h2>
     <button class="nav-btn active" onclick="switchTab('summary', this)">General Summary</button>
     <button class="nav-btn" onclick="switchTab('branch_sales', this)">Branch Sales</button>
-    <button class="nav-btn" onclick="switchTab('inventory', this)">Branch Inventory</button>
+    <button class="nav-btn" onclick="switchTab('inventory', this)">Full Inventory</button>
     <button class="nav-btn" onclick="switchTab('audit', this)">🔥 Stock Audit Log</button>
-    <button class="nav-btn" onclick="switchTab('products', this)">Top Products</button>
+    <button class="nav-btn" onclick="switchTab('products', this)">Top Selling Products</button>
     <button class="nav-btn" onclick="switchTab('low_stock', this)">Low Stock Alerts</button>
     <button class="nav-btn" onclick="switchTab('cashier', this)">Cashier Perf.</button>
     <button class="nav-btn" onclick="switchTab('peak', this)">Peak Hours</button>
-    <button onclick="exportFullData()" style="width:100%; margin-top:20px; padding:10px; background:var(--success); color:white; border:none; border-radius:8px; cursor:pointer">Export Full Excel</button>
-    <button onclick="location.reload()" style="width:100%; margin-top:10px; padding:10px; background:var(--danger); color:white; border:none; border-radius:8px; cursor:pointer">Logout</button>
+    
+    <div style="margin-top:30px; padding-top:20px; border-top:1px solid rgba(255,255,255,0.1)">
+        <button onclick="exportFullData()" style="width:100%; padding:12px; background:var(--success); color:white; border:none; border-radius:10px; cursor:pointer; margin-bottom:10px">Excel Export</button>
+        <button onclick="location.reload()" style="width:100%; padding:12px; background:var(--danger); color:white; border:none; border-radius:10px; cursor:pointer">Logout</button>
+    </div>
 </div>
 
 <div class="main">
-    <div style="display:flex; gap:10px; margin-bottom:30px; align-items:flex-end;">
-        <div><small>Start</small><br><input type="date" id="sd"></div>
-        <div><small>End</small><br><input type="date" id="ed"></div>
-        <button onclick="loadData()" style="padding:8px 20px; background:var(--primary); color:white; border:none; border-radius:5px; cursor:pointer">Filter</button>
+    <div class="filter-bar">
+        <div><small>From:</small><br><input type="date" id="sd"></div>
+        <div><small>To:</small><br><input type="date" id="ed"></div>
+        <button onclick="loadData()" style="padding:10px 25px; background:var(--primary); color:white; border:none; border-radius:8px; cursor:pointer; font-weight:600">Apply Filter</button>
     </div>
 
     <div class="stats-grid">
-        <div class="stat-card"><small>SALES</small><div id="stat_sales">0</div></div>
-        <div class="stat-card"><small>PROFIT</small><div id="stat_profit">0</div></div>
-        <div class="stat-card"><small>TRANS</small><div id="stat_trans">0</div></div>
-        <div class="stat-card"><small>LOW STOCK</small><div id="stat_alerts" style="color:red">0</div></div>
+        <div class="stat-card"><small>Total Sales</small><div id="stat_sales">0 EGP</div></div>
+        <div class="stat-card"><small>Net Profit</small><div id="stat_profit">0 EGP</div></div>
+        <div class="stat-card"><small>Orders</small><div id="stat_trans">0</div></div>
+        <div class="stat-card"><small>Low Stock</small><div id="stat_alerts" style="color:red">0</div></div>
     </div>
 
     <div class="report-container">
-        <h3 id="currentTitle">Report View</h3>
+        <h3 id="currentTitle" style="color:var(--primary); margin-top:0">Dashboard Summary</h3>
         <div id="chartBox"><canvas id="mainChart"></canvas></div>
-        <table id="mainTable"><thead id="tableHead"></thead><tbody id="tableBody"></tbody></table>
+        <table id="mainTable">
+            <thead id="tableHead"></thead>
+            <tbody id="tableBody"></tbody>
+        </table>
     </div>
 </div>
 
@@ -79,12 +90,18 @@ let activeTab = 'summary';
 let chartInstance;
 
 async function doLogin(){
-    const res = await fetch(API,{method:"POST", body:JSON.stringify({action:"login", username:u.value, password:p.value})}).then(r=>r.json());
-    if(res.role=="admin"){ loginOverlay.style.display="none"; loadData(); } else alert("Access Denied");
+    try {
+        const res = await fetch(API,{method:"POST", body:JSON.stringify({action:"login", username:u.value, password:p.value})}).then(r=>r.json());
+        if(res.status == "success" && res.role == "admin"){
+            loginOverlay.style.display="none";
+            loadData();
+        } else { alert("Admin Access Required"); }
+    } catch(e) { alert("Connection Error"); }
 }
 
 async function loadData(){
-    allData = await fetch(API,{method:"POST", body:JSON.stringify({action:"getAdvancedReports", start:sd.value, end:ed.value})}).then(r=>r.json());
+    const res = await fetch(API,{method:"POST", body:JSON.stringify({action:"getAdvancedReports", start:sd.value, end:ed.value})}).then(r=>r.json());
+    allData = res;
     updateDisplay();
 }
 
@@ -96,6 +113,7 @@ function switchTab(t, btn){
 }
 
 function updateDisplay(){
+    // Update Stats
     stat_sales.innerText = (allData.totalSales || 0).toLocaleString() + " EGP";
     stat_profit.innerText = (allData.totalProfit || 0).toLocaleString() + " EGP";
     stat_trans.innerText = allData.salesCount || 0;
@@ -103,18 +121,37 @@ function updateDisplay(){
 
     const head = document.getElementById('tableHead');
     const body = document.getElementById('tableBody');
-    body.innerHTML = ""; chartBox.style.display = "block";
+    body.innerHTML = "";
+    document.getElementById('chartBox').style.display = "block";
 
     if(activeTab == 'summary'){
+        currentTitle.innerText = "Daily Sales Trend";
         drawChart('line', Object.keys(allData.dailySales), Object.values(allData.dailySales), 'Revenue');
         head.innerHTML = "<tr><th>Date</th><th>Revenue</th></tr>";
-        Object.entries(allData.dailySales).forEach(([k,v])=> body.innerHTML+=`<tr><td>${k}</td><td>${v} EGP</td></tr>`);
-    } 
+        Object.entries(allData.dailySales).forEach(([k,v])=> body.innerHTML+=`<tr><td>${k}</td><td>${v.toLocaleString()} EGP</td></tr>`);
+    }
+    else if(activeTab == 'branch_sales'){
+        currentTitle.innerText = "Sales by Branch";
+        drawChart('bar', Object.keys(allData.branchSales), Object.values(allData.branchSales), 'Revenue');
+        head.innerHTML = "<tr><th>Branch</th><th>Total Revenue</th></tr>";
+        Object.entries(allData.branchSales).forEach(([k,v])=> body.innerHTML+=`<tr><td>${k}</td><td>${v.toLocaleString()} EGP</td></tr>`);
+    }
+    else if(activeTab == 'inventory'){
+        currentTitle.innerText = "Full Branch Inventory Status";
+        document.getElementById('chartBox').style.display = "none";
+        head.innerHTML = "<tr><th>Branch</th><th>Product</th><th>Current Stock</th><th>Value (Cost)</th></tr>";
+        for(let b in allData.branchInventory){
+            allData.branchInventory[b].forEach(i=> {
+                body.innerHTML+=`<tr><td>${b}</td><td>${i.name}</td><td>${i.stock}</td><td>${i.value.toLocaleString()} EGP</td></tr>`;
+            });
+        }
+    }
     else if(activeTab == 'audit'){
-        chartBox.style.display = "none";
-        head.innerHTML = "<tr><th>Time</th><th>User</th><th>Branch</th><th>Product</th><th>Qty</th><th>After</th><th>Action</th></tr>";
-        allData.auditDetails.reverse().forEach(l => {
-            let color = l.type=="IN"?"green":(l.type=="DELETE"?"red":"#3b82f6");
+        currentTitle.innerText = "Stock Movement Detailed Log";
+        document.getElementById('chartBox').style.display = "none";
+        head.innerHTML = "<tr><th>Time</th><th>User</th><th>Branch</th><th>Product</th><th>Qty</th><th>Final</th><th>Action</th></tr>";
+        [...allData.auditDetails].reverse().forEach(l => {
+            let color = l.type=="IN"?"#107c41":(l.type=="DELETE"?"#ef4444":"#3b82f6");
             body.innerHTML += `<tr>
                 <td><small>${l.date}</small></td>
                 <td>${l.user}</td>
@@ -126,21 +163,42 @@ function updateDisplay(){
             </tr>`;
         });
     }
-    else if(activeTab == 'inventory'){
-        chartBox.style.display = "none";
-        head.innerHTML = "<tr><th>Branch</th><th>Product</th><th>Stock</th><th>Value</th></tr>";
-        for(let b in allData.branchInventory){
-            allData.branchInventory[b].forEach(i=> body.innerHTML+=`<tr><td>${b}</td><td>${i.name}</td><td>${i.stock}</td><td>${i.value.toLocaleString()} EGP</td></tr>`);
-        }
+    else if(activeTab == 'products'){
+        currentTitle.innerText = "Top Selling Products (Qty)";
+        let sorted = Object.entries(allData.topProducts).sort((a,b)=>b[1]-a[1]);
+        drawChart('pie', sorted.map(x=>x[0]), sorted.map(x=>x[1]), 'Qty Sold');
+        head.innerHTML = "<tr><th>Product Name</th><th>Total Units Sold</th></tr>";
+        sorted.forEach(([k,v])=> body.innerHTML+=`<tr><td>${k}</td><td>${v} Units</td></tr>`);
     }
-    // ... (بقية التابات كما كانت في كودك الأصلي)
+    else if(activeTab == 'low_stock'){
+        currentTitle.innerText = "Critical Inventory Alerts";
+        document.getElementById('chartBox').style.display = "none";
+        head.innerHTML = "<tr><th>Product</th><th>Stock</th><th>Limit</th><th>Branch</th></tr>";
+        allData.lowStock.forEach(s=> {
+            body.innerHTML+=`<tr style="color:red; background:#fff5f5"><td>${s[0]}</td><td><b>${s[1]}</b></td><td>${s[3]}</td><td>${s[2]}</td></tr>`;
+        });
+    }
+    else if(activeTab == 'cashier'){
+        currentTitle.innerText = "Cashier Performance";
+        let c = Object.entries(allData.cashierSales).sort((a,b)=>b[1]-a[1]);
+        drawChart('bar', c.map(x=>x[0]), c.map(x=>x[1]), 'Total Revenue');
+        head.innerHTML = "<tr><th>Cashier Name</th><th>Total Generated Revenue</th></tr>";
+        c.forEach(([k,v])=> body.innerHTML+=`<tr><td>${k}</td><td>${v.toLocaleString()} EGP</td></tr>`);
+    }
+    else if(activeTab == 'peak'){
+        currentTitle.innerText = "Hourly Revenue Analysis";
+        drawChart('line', [...Array(24).keys()].map(h=>h+":00"), allData.hourlySales, 'Revenue');
+        head.innerHTML = "<tr><th>Hour</th><th>Revenue</th></tr>";
+        allData.hourlySales.forEach((v,i)=> { if(v>0) body.innerHTML+=`<tr><td>${i}:00</td><td>${v.toLocaleString()} EGP</td></tr>`});
+    }
 }
 
 function drawChart(type, labels, data, label){
     if(chartInstance) chartInstance.destroy();
-    chartInstance = new Chart(document.getElementById('mainChart'), {
+    const ctx = document.getElementById('mainChart').getContext('2d');
+    chartInstance = new Chart(ctx, {
         type: type,
-        data: { labels: labels, datasets: [{ label: label, data: data, backgroundColor: '#3b82f6' }] },
+        data: { labels: labels, datasets: [{ label: label, data: data, backgroundColor: '#3b82f6', borderColor: '#1e3a8a', borderWidth: 1 }] },
         options: { responsive: true, maintainAspectRatio: false }
     });
 }
@@ -148,8 +206,8 @@ function drawChart(type, labels, data, label){
 function exportFullData(){
     let wb = XLSX.utils.book_new();
     let ws = XLSX.utils.json_to_sheet(allData.auditDetails);
-    XLSX.utils.book_append_sheet(wb, ws, "Audit_Log");
-    XLSX.writeFile(wb, "UEC_Full_Report.xlsx");
+    XLSX.utils.book_append_sheet(wb, ws, "Inventory_Audit");
+    XLSX.writeFile(wb, "UEC_Report_Export.xlsx");
 }
 </script>
 </body>
