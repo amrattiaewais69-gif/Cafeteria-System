@@ -1,446 +1,234 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-<meta charset="UTF-8">
-<title>Cafeteria POS</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UEC System | Cashier & Inventory</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #1e3a8a;
+            --secondary: #3b82f6;
+            --success: #107c41;
+            --danger: #ef4444;
+            --bg: #f3f4f6;
+            --white: #ffffff;
+        }
 
-<style>
-body{font-family:Arial;background:#2f528f;text-align:center;color:#333}
+        body { font-family: 'Inter', sans-serif; background: var(--bg); margin: 0; color: #1e293b; }
 
-.card{
-  background:#fff;
-  width:380px;
-  margin:20px auto;
-  padding:20px;
-  border-radius:12px;
-}
+        /* Login Overlay */
+        .login-overlay { position: fixed; inset: 0; background: var(--primary); z-index: 10000; display: flex; align-items: center; justify-content: center; }
+        .login-box { background: white; padding: 40px; border-radius: 24px; width: 320px; text-align: center; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5); }
+        input { width: 100%; padding: 12px; margin: 10px 0; border: 1px solid #e2e8f0; border-radius: 10px; box-sizing: border-box; }
 
-input,select{
-  width:92%;
-  padding:10px;
-  margin:6px;
-}
+        /* Sidebar */
+        .sidebar { width: 260px; background: var(--primary); color: white; height: 100vh; position: fixed; padding: 25px; box-sizing: border-box; }
+        .sidebar h2 { font-size: 20px; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 15px; margin-bottom: 25px; }
+        .nav-link { padding: 12px; color: #cbd5e1; cursor: pointer; border-radius: 8px; margin-bottom: 8px; transition: 0.3s; display: block; text-decoration: none; font-size: 14px; }
+        .nav-link:hover, .nav-link.active { background: var(--secondary); color: white; }
 
-button{
-  width:95%;
-  padding:10px;
-  margin:5px;
-  background:#345a9d;
-  color:white;
-  border:none;
-  border-radius:6px;
-  cursor:pointer;
-}
+        /* Main Content */
+        .main-content { margin-left: 260px; padding: 30px; }
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; background: white; padding: 20px; border-radius: 16px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); }
+        .user-info { display: flex; align-items: center; gap: 10px; }
+        .user-photo { width: 40px; height: 40px; border-radius: 50%; background: #ddd; object-fit: cover; }
 
-button:hover{background:#274a86;}
+        /* Product Grid */
+        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 20px; }
+        .card { background: white; border-radius: 16px; padding: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); border: 1px solid #f1f5f9; text-align: center; transition: 0.3s; }
+        .card:hover { transform: translateY(-5px); box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); }
+        .card h3 { margin: 10px 0; font-size: 16px; color: var(--primary); }
+        .card .price { font-weight: 700; color: var(--success); font-size: 18px; margin-bottom: 15px; }
+        .card .stock { font-size: 12px; color: #64748b; margin-bottom: 15px; }
 
-.logout{background:#777;}
+        .btn { padding: 10px 20px; border-radius: 8px; border: none; cursor: pointer; font-weight: 600; font-family: inherit; transition: 0.3s; }
+        .btn-primary { background: var(--primary); color: white; width: 100%; }
+        .btn-success { background: var(--success); color: white; }
+        .btn-danger { background: var(--danger); color: white; }
 
-img{width:90px;border-radius:50%}
+        /* Forms (Admin Section) */
+        .admin-section { background: white; padding: 30px; border-radius: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); max-width: 600px; margin: 0 auto; }
+        .form-group { margin-bottom: 15px; }
+        .form-group label { display: block; margin-bottom: 5px; font-size: 13px; font-weight: 600; }
+        
+        /* Modal for Quantity */
+        .modal { display:none; position: fixed; inset:0; background: rgba(0,0,0,0.5); align-items: center; justify-content: center; z-index: 1000; }
+        .modal-content { background: white; padding: 30px; border-radius: 20px; width: 300px; text-align: center; }
 
-hr{margin:15px 0}
-</style>
+        #adminPanel { display: none; }
+        .hidden { display: none; }
+    </style>
 </head>
-
 <body>
 
-<!-- LOGIN -->
-<div class="card" id="loginDiv">
-  <img src="https://amrattiaewais69-gif.github.io/Cafeteria-System/photos/logo.png" height="70">
-  <h2>Cafeteria POS System</h2>
-  <h3>Cashier Login</h3>
-  <input id="user" placeholder="Username">
-  <input id="pass" type="password" placeholder="Password">
-  <button onclick="login()">Login</button>
+<div id="loginOverlay" class="login-overlay">
+    <div class="login-box">
+        <img src="https://amrattiaewais69-gif.github.io/Cafeteria-System/photos/logo.png" width="80">
+        <h3>UEC Terminal</h3>
+        <input type="text" id="username" placeholder="Username">
+        <input type="password" id="password" placeholder="Password">
+        <button class="btn btn-primary" onclick="login()">Login</button>
+    </div>
 </div>
 
-<!-- CASHIER -->
-<div class="card" id="cashierDiv" style="display:none;">
-
-  <img id="photo">
-  <h3 id="name"></h3>
-  <p id="cashierName"></p>
-
-  <select id="products" onchange="setPrice()"></select>
-
-  <p>Stock: <span id="stock">0</span></p>
-
-  <input id="qty" type="number" placeholder="Qty">
-
-  <p>Price: <span id="price">0</span></p>
-
-  <input id="paid" type="number" placeholder="Paid" oninput="updateBill()">
-
-  <p>Total: <span id="total">0</span></p>
-  <p>Change: <span id="change">0</span></p>
-
-  <hr>
-
-  <!-- CART -->
-  <h4>🧾 Bill Items</h4>
-
-  <div id="cartBox" style="text-align:left;background:#f7f7f7;padding:10px;border-radius:8px;max-height:180px;overflow:auto;"></div>
-
-  <b>Total Bill: <span id="billTotal">0</span></b>
-
-  <hr>
-
-  <button onclick="addToCart()">Add</button>
-  <button onclick="checkout()">Checkout</button>
-  <button onclick="newSale()">New Sale</button>
-  <button class="logout" onclick="logout()">Logout</button>
-
+<div class="sidebar">
+    <h2>UEC Terminal</h2>
+    <a class="nav-link active" id="cashierLink" onclick="showSection('cashier')">Cashier (Sales)</a>
+    <a class="nav-link" id="adminLink" onclick="showSection('admin')">Admin (Products)</a>
+    <div style="position:absolute; bottom: 20px; width: calc(100% - 50px);">
+        <button class="btn btn-danger" onclick="logout()">Logout</button>
+    </div>
 </div>
 
-<!-- ADMIN -->
-<div class="card" id="adminDiv" style="display:none;">
+<div class="main-content">
+    <div class="header">
+        <h2 id="sectionTitle">Point of Sale</h2>
+        <div class="user-info">
+            <span id="userNameDisplay">Welcome</span>
+            <img id="userPhotoDisplay" class="user-photo" src="">
+        </div>
+    </div>
 
-  <h3>Admin Panel</h3>
+    <div id="cashierPanel">
+        <div class="grid" id="productGrid">
+            </div>
+    </div>
 
-  <input id="pname" placeholder="Product Name">
-  <input id="ppurchase" placeholder="Purchase Price">
-  <input id="psale" placeholder="Sale Price">
-  <input id="pstock" placeholder="Stock">
-  <input id="pbranch" placeholder="Branch">
-  <input id="pmin" placeholder="Min Stock">
+    <div id="adminPanel">
+        <div class="admin-section">
+            <h3>Add New Product</h3>
+            <div class="form-group">
+                <label>Product Name</label>
+                <input type="text" id="pName">
+            </div>
+            <div style="display: flex; gap: 10px;">
+                <div class="form-group" style="flex:1">
+                    <label>Purchase Price</label>
+                    <input type="number" id="pPurchase">
+                </div>
+                <div class="form-group" style="flex:1">
+                    <label>Sale Price</label>
+                    <input type="number" id="pSale">
+                </div>
+            </div>
+            <div style="display: flex; gap: 10px;">
+                <div class="form-group" style="flex:1">
+                    <label>Stock Qty</label>
+                    <input type="number" id="pStock">
+                </div>
+                <div class="form-group" style="flex:1">
+                    <label>Min. Stock</label>
+                    <input type="number" id="pMin">
+                </div>
+            </div>
+            <button class="btn btn-success" onclick="addNewProduct()">Save Product</button>
+        </div>
+    </div>
+</div>
 
-  <button onclick="addProduct()">➕ Add Product</button>
-
-  <hr>
-
-  <select id="stockProduct"></select>
-  <input id="addQty" type="number" placeholder="Add Stock">
-  <button onclick="increaseStock()">➕ Add Stock</button>
-
-  <hr>
-
-  <select id="deleteProductList"></select>
-  <button onclick="deleteProduct()">❌ Delete Product</button>
-
-  <button class="logout" onclick="logout()">Logout</button>
-
+<div id="qtyModal" class="modal">
+    <div class="modal-content">
+        <h3 id="modalProductName">Quantity</h3>
+        <input type="number" id="saleQty" value="1" min="1">
+        <div style="display:flex; gap:10px; margin-top:20px;">
+            <button class="btn btn-danger" style="flex:1" onclick="closeModal()">Cancel</button>
+            <button class="btn btn-success" style="flex:1" onclick="processSale()">Confirm</button>
+        </div>
+    </div>
 </div>
 
 <script>
-
-const API="https://script.google.com/macros/s/AKfycbxfZ-90qz7Ryu0eigoFDFoA0tiPDVUxkSnyX8arMftTdEYE1dy67Dt_WiYU5DMWYpgZ2w/exec";
-
-let currentUser={};
-let cart=[];
-
-// ================= LOGIN =================
-function login(){
-
-fetch(API,{
-method:"POST",
-body:JSON.stringify({
-action:"login",
-username:user.value,
-password:pass.value
-})
-})
-.then(r=>r.json())
-.then(res=>{
-
-if(res.status=="success"){
-currentUser=res;
-
-loginDiv.style.display="none";
-
-name.innerText=res.name;
-cashierName.innerText="Cashier: "+res.name;
-photo.src=res.photo || "https://i.pravatar.cc/100";
-
-if(res.role=="admin"){
-adminDiv.style.display="block";
-loadAdmin();
-}else{
-cashierDiv.style.display="block";
-loadProducts();
-}
-
-}else{
-alert("Login Failed");
-}
-
-});
-
-}
-
-// ================= PRODUCTS =================
-function loadProducts(){
-
-fetch(API,{
-method:"POST",
-body:JSON.stringify({
-action:"getProducts",
-role:currentUser.role,
-branch:currentUser.branch
-})
-})
-.then(r=>r.json())
-.then(data=>{
-
-products.innerHTML="";
-
-data.forEach(p=>{
-
-let opt=document.createElement("option");
-opt.value=p.id;
-opt.text=`${p.name} - ${p.price} (Stock:${p.stock})`;
-opt.setAttribute("data-price",p.price);
-opt.setAttribute("data-stock",p.stock);
-
-products.appendChild(opt);
-
-});
-
-setPrice();
-
-});
-
-}
-
-function setPrice(){
-
-let s=products.options[products.selectedIndex];
-
-price.innerText=s.getAttribute("data-price");
-stock.innerText=s.getAttribute("data-stock");
-
-}
-
-// ================= CART =================
-function addToCart(){
-
-let p=parseFloat(price.innerText);
-let q=parseInt(qty.value);
-
-if(!q || q<=0){
-alert("Invalid qty");
-return;
-}
-
-cart.push({
-id:products.value,
-name:products.options[products.selectedIndex].text,
-qty:q,
-price:p,
-total:q*p
-});
-
-renderCart();
-updateBill();
-
-}
-
-// ================= RENDER CART + REMOVE =================
-function renderCart(){
-
-cartBox.innerHTML="";
-let t=0;
-
-cart.forEach((i,index)=>{
-t+=i.total;
-
-cartBox.innerHTML+=`
-<div style="display:flex;justify-content:space-between;align-items:center;padding:5px;border-bottom:1px solid #ddd">
-
-<div>
-<b>${i.name}</b><br>
-<small>Qty: ${i.qty} | Total: ${i.total}</small>
-</div>
-
-<button onclick="removeItem(${index})" style="background:red;width:40px;height:30px">X</button>
-
-</div>
-`;
-});
-
-billTotal.innerText=t;
-
-updateBill();
-
-}
-
-// ================= REMOVE ITEM (RETURN STOCK READY) =================
-function removeItem(index){
-
-if(!confirm("Remove item?")) return;
-
-// optional stock return (backend)
-fetch(API,{
-method:"POST",
-body:JSON.stringify({
-action:"returnStock",
-productID:cart[index].id,
-qty:cart[index].qty
-})
-});
-
-cart.splice(index,1);
-renderCart();
-
-}
-
-// ================= BILL =================
-function updateBill(){
-
-let total=cart.reduce((a,b)=>a+b.total,0);
-
-document.getElementById("total").innerText=total;
-
-let paidVal=parseFloat(paid.value||0);
-
-document.getElementById("change").innerText=paidVal-total;
-
-}
-
-// ================= CHECKOUT =================
-function checkout(){
-
-if(cart.length==0){
-alert("Cart empty");
-return;
-}
-
-let req=cart.map(i=>{
-
-return fetch(API,{
-method:"POST",
-body:JSON.stringify({
-action:"addSale",
-username:currentUser.name,
-branch:currentUser.branch,
-productID:i.id,
-qty:i.qty,
-price:i.price
-})
-}).then(r=>r.json());
-
-});
-
-Promise.all(req).then(res=>{
-
-for(let r of res){
-if(r.status=="error"){
-alert(r.message);
-return;
-}
-}
-
-alert("Sale Done ✅");
-
-cart=[];
-renderCart();
-
-paid.value="";
-change.innerText=0;
-
-loadProducts();
-
-});
-
-}
-
-// ================= NEW SALE =================
-function newSale(){
-cart=[];
-renderCart();
-paid.value="";
-change.innerText=0;
-}
-
-// ================= ADMIN =================
-function loadAdmin(){
-
-fetch(API,{
-method:"POST",
-body:JSON.stringify({
-action:"getProducts",
-role:"admin"
-})
-})
-.then(r=>r.json())
-.then(data=>{
-
-stockProduct.innerHTML="";
-deleteProductList.innerHTML="";
-
-data.forEach(p=>{
-
-let text=`${p.name} (Stock:${p.stock}) - ${p.branch}`;
-
-let o1=document.createElement("option");
-o1.value=p.id;
-o1.text=text;
-
-stockProduct.appendChild(o1);
-deleteProductList.appendChild(o1.cloneNode(true));
-
-});
-
-});
-
-}
-
-function addProduct(){
-
-fetch(API,{
-method:"POST",
-body:JSON.stringify({
-action:"addProduct",
-name:pname.value,
-purchase:ppurchase.value,
-sale:psale.value,
-stock:pstock.value,
-branch:pbranch.value,
-minStock:pmin.value,
-username:currentUser.name
-})
-});
-
-alert("Product Added");
-}
-
-function increaseStock(){
-
-fetch(API,{
-method:"POST",
-body:JSON.stringify({
-action:"addStock",
-productID:stockProduct.value,
-qty:addQty.value,
-username:currentUser.name,
-branch:currentUser.branch
-})
-});
-
-alert("Stock Updated");
-}
-
-function deleteProduct(){
-
-fetch(API,{
-method:"POST",
-body:JSON.stringify({
-action:"deleteProduct",
-productID:deleteProductList.value,
-username:currentUser.name,
-branch:currentUser.branch
-})
-});
-
-alert("Deleted");
-}
-
-// ================= LOGOUT =================
-function logout(){
-localStorage.clear();
-location.reload();
-}
-
+    const API = "https://script.google.com/macros/s/AKfycbxfZ-90qz7Ryu0eigoFDFoA0tiPDVUxkSnyX8arMftTdEYE1dy67Dt_WiYU5DMWYpgZ2w/exec"; 
+    let currentUser = {};
+    let selectedProduct = null;
+
+    async function login() {
+        const u = document.getElementById('username').value;
+        const p = document.getElementById('password').value;
+        const res = await fetch(API, {method:"POST", body: JSON.stringify({action:"login", username:u, password:p})}).then(r=>r.json());
+        
+        if(res.status == "success") {
+            currentUser = res;
+            currentUser.username = u;
+            document.getElementById('loginOverlay').style.display = 'none';
+            document.getElementById('userNameDisplay').innerText = res.name;
+            document.getElementById('userPhotoDisplay').src = res.photo || "https://via.placeholder.com/40";
+            
+            if(res.role !== "admin") adminLink.classList.add('hidden');
+            loadProducts();
+        } else { alert("Invalid login!"); }
+    }
+
+    async function loadProducts() {
+        const products = await fetch(API, {method:"POST", body: JSON.stringify({action:"getProducts", role:currentUser.role, branch:currentUser.branch})}).then(r=>r.json());
+        const grid = document.getElementById('productGrid');
+        grid.innerHTML = "";
+        
+        products.forEach(p => {
+            grid.innerHTML += `
+                <div class="card">
+                    <h3>${p.name}</h3>
+                    <div class="price">${p.price} EGP</div>
+                    <div class="stock">Available: ${p.stock}</div>
+                    <button class="btn btn-primary" onclick="openSaleModal(${JSON.stringify(p).replace(/"/g, '&quot;')})">Sell</button>
+                </div>
+            `;
+        });
+    }
+
+    function openSaleModal(product) {
+        selectedProduct = product;
+        document.getElementById('modalProductName').innerText = product.name;
+        document.getElementById('qtyModal').style.display = 'flex';
+    }
+
+    async function processSale() {
+        const qty = document.getElementById('saleQty').value;
+        const res = await fetch(API, {method:"POST", body: JSON.stringify({
+            action: "addSale",
+            productID: selectedProduct.id,
+            qty: qty,
+            price: selectedProduct.price,
+            username: currentUser.username,
+            branch: currentUser.branch
+        })}).then(r=>r.json());
+
+        if(res.status == "success") {
+            alert("Sale completed!");
+            closeModal();
+            loadProducts();
+        } else {
+            alert(res.message || "Error during sale");
+        }
+    }
+
+    async function addNewProduct() {
+        const data = {
+            action: "addProduct",
+            name: document.getElementById('pName').value,
+            purchase: document.getElementById('pPurchase').value,
+            sale: document.getElementById('pSale').value,
+            stock: document.getElementById('pStock').value,
+            minStock: document.getElementById('pMin').value,
+            branch: currentUser.branch,
+            username: currentUser.username
+        };
+        const res = await fetch(API, {method:"POST", body: JSON.stringify(data)}).then(r=>r.json());
+        if(res.status == "success") { alert("Product added!"); loadProducts(); }
+    }
+
+    function showSection(sec) {
+        document.getElementById('cashierPanel').style.display = sec == 'cashier' ? 'block' : 'none';
+        document.getElementById('adminPanel').style.display = sec == 'admin' ? 'block' : 'none';
+        document.getElementById('sectionTitle').innerText = sec == 'cashier' ? 'Point of Sale' : 'Add New Product';
+        
+        document.getElementById('cashierLink').classList.toggle('active', sec == 'cashier');
+        document.getElementById('adminLink').classList.toggle('active', sec == 'admin');
+    }
+
+    function closeModal() { document.getElementById('qtyModal').style.display = 'none'; }
+    function logout() { location.reload(); }
 </script>
-
 </body>
 </html>
