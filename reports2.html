@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <title>نظام تقارير كافيتريا الجامعة | Admin</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.0/xlsx.full.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        :root { --primary: #1e3a8a; --secondary: #3b82f6; --bg: #f8fafc; --white: #ffffff; }
+        body { font-family: 'Cairo', sans-serif; background: var(--bg); margin: 0; color: #333; }
+        
+        /* Login */
+        .login-screen { position: fixed; inset: 0; background: var(--primary); display: flex; align-items: center; justify-content: center; z-index: 1000; }
+        .login-box { background: var(--white); padding: 40px; border-radius: 20px; width: 350px; text-align: center; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1); }
+        
+        /* Layout */
+        .header { background: var(--white); padding: 15px 30px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+        .sidebar { width: 250px; background: var(--primary); color: white; height: 100vh; position: fixed; right: 0; padding-top: 20px; }
+        .main-content { margin-right: 250px; padding: 30px; }
+        
+        /* Components */
+        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 30px; }
+        .stat-card { background: var(--white); padding: 20px; border-radius: 15px; border-right: 5px solid var(--secondary); box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+        .stat-card h4 { margin: 0; color: #64748b; font-size: 14px; }
+        .stat-card p { margin: 10px 0 0; font-size: 24px; font-weight: bold; color: var(--primary); }
+
+        .filter-bar { background: var(--white); padding: 15px; border-radius: 15px; margin-bottom: 25px; display: flex; gap: 15px; align-items: flex-end; }
+        .btn { padding: 10px 20px; border-radius: 8px; border: none; cursor: pointer; transition: 0.3s; font-family: 'Cairo'; }
+        .btn-primary { background: var(--primary); color: white; }
+        .btn-excel { background: #107c41; color: white; }
+
+        .chart-container { background: var(--white); padding: 20px; border-radius: 15px; margin-bottom: 20px; }
+        table { width: 100%; border-collapse: collapse; background: white; border-radius: 10px; overflow: hidden; }
+        th { background: #f1f5f9; padding: 12px; text-align: right; }
+        td { padding: 12px; border-top: 1px solid #f1f5f9; }
+    </style>
+</head>
+<body>
+
+<div id="loginPage" class="login-screen">
+    <div class="login-box">
+        <img src="https://amrattiaewais69-gif.github.io/Cafeteria-System/photos/logo.png" width="80">
+        <h3>تسجيل دخول الإدارة</h3>
+        <input type="text" id="u" placeholder="اسم المستخدم" style="width:100%; padding:10px; margin:10px 0;">
+        <input type="password" id="p" placeholder="كلمة المرور" style="width:100%; padding:10px; margin:10px 0;">
+        <button class="btn btn-primary" style="width:100%" onclick="handleLogin()">دخول</button>
+    </div>
+</div>
+
+<div id="dashboard" style="display:none;">
+    <div class="sidebar">
+        <h3 style="text-align:center">لوحة التحكم</h3>
+        <div style="padding:20px">
+            <button class="btn btn-primary" style="width:100%; margin-bottom:10px" onclick="refreshData()">تحديث البيانات</button>
+            <button class="btn btn-excel" style="width:100%" onclick="exportToExcel()">تصدير Excel</button>
+        </div>
+    </div>
+
+    <div class="main-content">
+        <div class="filter-bar">
+            <div>
+                <label>من تاريخ:</label><br>
+                <input type="date" id="startDate">
+            </div>
+            <div>
+                <label>إلى تاريخ:</label><br>
+                <input type="date" id="endDate">
+            </div>
+            <button class="btn btn-primary" onclick="refreshData()">تطبيق الفلتر</button>
+        </div>
+
+        <div class="stats-grid">
+            <div class="stat-card">
+                <h4>إجمالي المبيعات</h4>
+                <p id="totalSales">0</p>
+            </div>
+            <div class="stat-card">
+                <h4>صافي الأرباح</h4>
+                <p id="totalProfit">0</p>
+            </div>
+            <div class="stat-card">
+                <h4>عدد العمليات</h4>
+                <p id="salesCount">0</p>
+            </div>
+        </div>
+
+        <div style="display:grid; grid-template-columns: 2fr 1fr; gap:20px;">
+            <div class="chart-container">
+                <h3>مخطط المبيعات اليومي</h3>
+                <canvas id="dailyChart"></canvas>
+            </div>
+            <div class="chart-container">
+                <h3>أوقات الذروة (بالساعة)</h3>
+                <canvas id="hourChart"></canvas>
+            </div>
+        </div>
+
+        <div class="chart-container">
+            <h3>تنبيه نقص المخزون</h3>
+            <table id="lowStockTable">
+                <thead><tr><th>الصنف</th><th>الكمية الحالية</th><th>الفرع</th></tr></thead>
+                <tbody></tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script>
+const API = "https://script.google.com/macros/s/AKfycbxfZ-90qz7Ryu0eigoFDFoA0tiPDVUxkSnyX8arMftTdEYE1dy67Dt_WiYU5DMWYpgZ2w/exec"; 
+let reportData = {};
+
+async function handleLogin() {
+    const res = await fetch(API, {
+        method: "POST",
+        body: JSON.stringify({ action: "login", username: u.value, password: p.value })
+    }).then(r => r.json());
+
+    if (res.role === "admin") {
+        document.getElementById('loginPage').style.display = 'none';
+        document.getElementById('dashboard').style.display = 'block';
+        refreshData();
+    } else {
+        alert("عفواً، هذا النظام للمديرين فقط");
+    }
+}
+
+async function refreshData() {
+    const start = document.getElementById('startDate').value;
+    const end = document.getElementById('endDate').value;
+
+    reportData = await fetch(API, {
+        method: "POST",
+        body: JSON.stringify({ action: "getAdvancedReports", start, end })
+    }).then(r => r.json());
+
+    updateUI();
+}
+
+function updateUI() {
+    document.getElementById('totalSales').innerText = reportData.totalSales.toLocaleString() + " ج.م";
+    document.getElementById('totalProfit').innerText = reportData.totalProfit.toLocaleString() + " ج.م";
+    
+    // Daily Chart
+    renderChart('dailyChart', 'line', Object.keys(reportData.dailySales), Object.values(reportData.dailySales), 'المبيعات اليومية');
+    
+    // Hourly Chart
+    renderChart('hourChart', 'bar', [...Array(24).keys()].map(h => h+":00"), reportData.hourlySales, 'الزروة');
+
+    // Low Stock Table
+    const tbody = document.querySelector('#lowStockTable tbody');
+    tbody.innerHTML = reportData.lowStock.map(row => `<tr><td>${row[0]}</td><td style="color:red">${row[1]}</td><td>${row[2]}</td></tr>`).join('');
+}
+
+let charts = {};
+function renderChart(id, type, labels, data, label) {
+    if (charts[id]) charts[id].destroy();
+    charts[id] = new Chart(document.getElementById(id), {
+        type: type,
+        data: {
+            labels: labels,
+            datasets: [{ label: label, data: data, backgroundColor: '#3b82f6', borderColor: '#1e3a8a' }]
+        },
+        options: { responsive: true }
+    });
+}
+
+function exportToExcel() {
+    const ws = XLSX.utils.json_to_sheet([
+        { "الإجمالي": "إجمالي المبيعات", "القيمة": reportData.totalSales },
+        { "الإجمالي": "إجمالي الأرباح", "القيمة": reportData.totalProfit }
+    ]);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Summary");
+    XLSX.writeFile(wb, "University_Cafeteria_Report.xlsx");
+}
+</script>
+</body>
+</html>
