@@ -37,7 +37,8 @@
         .btn { padding: 10px 22px; border-radius: 8px; border: none; cursor: pointer; font-weight: 600; transition: 0.3s; }
         .btn-primary { background: var(--primary); color: white; }
         .btn-excel { background: var(--success); color: white; }
-        .btn-primary:hover { opacity: 0.9; }
+        .btn-danger { background: var(--danger); color: white; }
+        .btn:hover { opacity: 0.9; }
 
         canvas { width: 100% !important; max-height: 400px; }
 
@@ -52,7 +53,7 @@
     <div class="login-box">
         <img src="https://amrattiaewais69-gif.github.io/Cafeteria-System/photos/logo.png" width="80">
         <h2 style="color:var(--primary)">UEC University</h2>
-        <p style="color:#666">Admin Reports Panel</p>
+        <p style="color:#666">UEC Cafeteria Reports Panel</p>
         <input type="text" id="u" placeholder="Admin Username">
         <input type="password" id="p" placeholder="Password">
         <button class="btn btn-primary" style="width:100%; margin-top:10px;" onclick="doLogin()">Login</button>
@@ -70,8 +71,10 @@
     <button class="nav-btn" onclick="switchTab('peak', this)">Peak Hours</button>
     <button class="nav-btn" onclick="switchTab('low_stock', this)">Low Stock Alerts</button>
     <button class="nav-btn" onclick="switchTab('audit', this)">Stock Audit Log</button>
+    
     <div style="margin-top:40px">
         <button class="btn btn-excel" style="width:100%" onclick="exportFullData()">Full Export (Excel)</button>
+        <button class="btn btn-danger" style="width:100%; margin-top: 10px;" onclick="doLogout()">Logout</button>
     </div>
 </div>
 
@@ -103,22 +106,49 @@
 </div>
 
 <script>
+// Replace with your Web App URL from Apps Script
 const API = "https://script.google.com/macros/s/AKfycbxfZ-90qz7Ryu0eigoFDFoA0tiPDVUxkSnyX8arMftTdEYE1dy67Dt_WiYU5DMWYpgZ2w/exec"; 
+
 let allData = {};
 let activeTab = 'summary';
 let chartInstance;
 
+// Login Logic
 async function doLogin(){
-    const res = await fetch(API,{method:"POST", body:JSON.stringify({action:"login", username:u.value, password:p.value})}).then(r=>r.json());
-    if(res.role=="admin"){ loginOverlay.style.display="none"; loadData(); }
-    else alert("Invalid Admin Credentials");
+    try {
+        const res = await fetch(API,{method:"POST", body:JSON.stringify({action:"login", username:u.value, password:p.value})}).then(r=>r.json());
+        if(res.role=="admin"){ 
+            loginOverlay.style.display="none"; 
+            loadData(); 
+        } else { 
+            alert("Invalid Admin Credentials"); 
+        }
+    } catch(e) {
+        alert("Connection Error. Make sure API URL is correct.");
+    }
 }
 
+// Logout Logic
+function doLogout() {
+    if(confirm("Are you sure you want to logout?")) {
+        loginOverlay.style.display = 'flex';
+        u.value = "";
+        p.value = "";
+        // Optional: clear data to prevent back-button viewing
+        location.reload(); 
+    }
+}
+
+// Fetch Data from Backend
 async function loadData(){
-    allData = await fetch(API,{method:"POST", body:JSON.stringify({action:"getAdvancedReports", start:sd.value, end:ed.value})}).then(r=>r.json());
+    const start = document.getElementById('sd').value;
+    const end = document.getElementById('ed').value;
+    
+    allData = await fetch(API,{method:"POST", body:JSON.stringify({action:"getAdvancedReports", start:start, end:end})}).then(r=>r.json());
     updateDisplay();
 }
 
+// Tab Switching
 function switchTab(t, btn){
     activeTab = t;
     document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
@@ -126,15 +156,16 @@ function switchTab(t, btn){
     updateDisplay();
 }
 
+// Update UI based on active Tab
 function updateDisplay(){
-    // Top Bar Stats
-    stat_sales.innerText = allData.totalSales.toLocaleString() + " EGP";
-    stat_profit.innerText = allData.totalProfit.toLocaleString() + " EGP";
-    stat_trans.innerText = allData.salesCount;
-    stat_alerts.innerText = allData.lowStock.length;
+    stat_sales.innerText = (allData.totalSales || 0).toLocaleString() + " EGP";
+    stat_profit.innerText = (allData.totalProfit || 0).toLocaleString() + " EGP";
+    stat_trans.innerText = allData.salesCount || 0;
+    stat_alerts.innerText = allData.lowStock ? allData.lowStock.length : 0;
 
     const head = document.getElementById('tableHead');
     const body = document.getElementById('tableBody');
+    const chartBox = document.getElementById('chartBox');
     body.innerHTML = "";
     chartBox.style.display = "block";
 
@@ -155,7 +186,7 @@ function updateDisplay(){
         chartBox.style.display = "none";
         head.innerHTML = "<tr><th>Branch</th><th>Product</th><th>Stock</th><th>Value (Cost)</th></tr>";
         for(let b in allData.branchInventory){
-            allData.branchInventory[b].forEach(i=> body.innerHTML+=`<tr><td>${b}</td><td>${i.name}</td><td>${i.stock}</td><td>${i.value} EGP</td></tr>`);
+            allData.branchInventory[b].forEach(i=> body.innerHTML+=`<tr><td>${b}</td><td>${i.name}</td><td>${i.stock}</td><td>${i.value.toLocaleString()} EGP</td></tr>`);
         }
     }
     else if(activeTab == 'products'){
@@ -170,7 +201,7 @@ function updateDisplay(){
         let days = Object.entries(allData.dailySales).sort((a,b)=>b[1]-a[1]);
         drawChart('bar', days.map(x=>x[0]), days.map(x=>x[1]), 'Revenue');
         head.innerHTML = "<tr><th>Status</th><th>Date</th><th>Revenue</th></tr>";
-        days.forEach((d,i)=> body.innerHTML+=`<tr><td>${i<2?'🔥 Strong':'❄️ Weak'}</td><td>${d[0]}</td><td>${d[1]} EGP</td></tr>`);
+        days.forEach((d,i)=> body.innerHTML+=`<tr><td>${i<2?'🔥 High Strength':'❄️ Weak/Normal'}</td><td>${d[0]}</td><td>${d[1]} EGP</td></tr>`);
     }
     else if(activeTab == 'peak'){
         currentTitle.innerText = "Hourly Peak Times";
@@ -192,33 +223,58 @@ function updateDisplay(){
         c.forEach(([k,v])=> body.innerHTML+=`<tr><td>${k}</td><td>${v} EGP</td></tr>`);
     }
     else if(activeTab == 'audit'){
-        currentTitle.innerText = "Stock Movement History";
+        currentTitle.innerText = "Stock Movement Audit";
         chartBox.style.display = "none";
-        head.innerHTML = "<tr><th>Action Type</th><th>Total Count</th></tr>";
-        Object.entries(allData.stockMovement).forEach(([k,v])=> body.innerHTML+=`<tr><td>${k}</td><td>${v}</td></tr>`);
+        head.innerHTML = "<tr><th>Action Type</th><th>Total Operations</th></tr>";
+        Object.entries(allData.stockMovement).forEach(([k,v])=> body.innerHTML+=`<tr><td>${k}</td><td>${v} times</td></tr>`);
     }
 }
 
+// Charting Function
 function drawChart(type, labels, data, label){
     if(chartInstance) chartInstance.destroy();
-    chartInstance = new Chart(document.getElementById('mainChart'), {
+    const ctx = document.getElementById('mainChart').getContext('2d');
+    chartInstance = new Chart(ctx, {
         type: type,
-        data: { labels: labels, datasets: [{ label: label, data: data, backgroundColor: ['#3b82f6','#107c41','#f59e0b','#ef4444','#8b5cf6'], borderColor: '#1e3a8a', borderWidth: 1 }] },
+        data: { 
+            labels: labels, 
+            datasets: [{ 
+                label: label, 
+                data: data, 
+                backgroundColor: ['#3b82f6','#107c41','#f59e0b','#ef4444','#8b5cf6'], 
+                borderColor: '#1e3a8a', 
+                borderWidth: 1 
+            }] 
+        },
         options: { responsive: true, maintainAspectRatio: false }
     });
 }
 
+// Export Tab to Excel
 function exportCurrentTable(){
     let wb = XLSX.utils.table_to_book(document.getElementById('mainTable'));
-    XLSX.writeFile(wb, `UEC_${activeTab}_Report.xlsx`);
+    XLSX.writeFile(wb, `UEC_Report_${activeTab}.xlsx`);
 }
 
+// General Export
 function exportFullData(){
-    let ws_data = [["UEC FULL REPORT"], ["Generated At", new Date()], [], ["General Stats"], ["Total Sales", allData.totalSales], ["Profit", allData.totalProfit]];
+    let ws_data = [
+        ["UEC UNIVERSITY - FULL SYSTEM REPORT"],
+        ["Export Date", new Date().toLocaleString()],
+        [],
+        ["SUMMARY STATS"],
+        ["Total Sales Revenue", allData.totalSales],
+        ["Total Net Profit", allData.totalProfit],
+        ["Transaction Count", allData.salesCount],
+        [],
+        ["BRANCH BREAKDOWN"]
+    ];
+    Object.entries(allData.branchSales).forEach(x => ws_data.push(x));
+    
     let wb = XLSX.utils.book_new();
     let ws = XLSX.utils.aoa_to_sheet(ws_data);
-    XLSX.utils.book_append_sheet(wb, ws, "General Summary");
-    XLSX.writeFile(wb, "UEC_Global_Report.xlsx");
+    XLSX.utils.book_append_sheet(wb, ws, "General_Report");
+    XLSX.writeFile(wb, "UEC_Full_University_Report.xlsx");
 }
 </script>
 </body>
